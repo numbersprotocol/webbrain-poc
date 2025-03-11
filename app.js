@@ -22,6 +22,11 @@ document.addEventListener('DOMContentLoaded', () => {
         apiKeyModal.style.display = 'flex';
     }
 
+    // Check if we have existing URLs and hide the URL modal if we do
+    if (urls.length > 0) {
+        urlModal.style.display = 'none';
+    }
+
     // Save API key
     apiKeySaveBtn.addEventListener('click', () => {
         const apiKey = apiKeyInput.value.trim();
@@ -531,5 +536,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // If we have processed URLs, enable the chat
     if (urls.some(url => url.status === 'ready')) {
         enableChat();
+        // Also ensure the URL modal is hidden
+        urlModal.style.display = 'none';
     }
 });
