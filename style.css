@@ -158,11 +158,37 @@ h2 {
     max-width: 65%;
 }
 
+.url-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
 .url-status {
     font-size: 12px;
     padding: 3px 8px;
     border-radius: 3px;
     background-color: var(--color-background);
+}
+
+.delete-url-btn {
+    background-color: var(--color-error);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+}
+
+.delete-url-btn:hover {
+    background-color: #c82333;
 }
 
 .url-status.loading {

@@ -121,6 +121,9 @@ document.addEventListener('DOMContentLoaded', () => {
         renderUrls();
 
         try {
+            // Show a more detailed message to the user
+            console.log(`Attempting to fetch content from ${url}...`);
+            
             // Try to fetch website content
             const content = await fetchWebsiteContent(url);
             currentWebsiteContent = content;
@@ -143,12 +146,8 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.setItem('urls', JSON.stringify(urls));
             renderUrls();
             
-            if (error.message.includes('CORS')) {
-                alert('CORS error: Unable to access the website directly. Try a website that has CORS enabled or consider using a proxy server.');
-            } else {
-                alert('Error processing URL: ' + error.message);
-            }
             console.error('Error processing URL:', error);
+            alert(`Error processing URL: ${error.message}`);
         }
     };
 
@@ -162,13 +161,49 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const fetchWebsiteContent = async (url) => {
-        const corsProxy = 'https://cors-anywhere.herokuapp.com/';
-        try {
-            const response = await fetch(`${corsProxy}${url}`, {
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
+        // List of CORS proxies to try (in order)
+        const corsProxies = [
+            'https://corsproxy.io/?',
+            'https://api.allorigins.win/raw?url=',
+            'https://cors-anywhere.herokuapp.com/'
+        ];
+        
+        let lastError = null;
+        
+        // Try each proxy in sequence
+        for (const proxy of corsProxies) {
+            try {
+                const proxyUrl = `${proxy}${encodeURIComponent(url)}`;
+                console.log(`Trying proxy: ${proxy} for URL: ${url}`);
+                
+                const response = await fetch(proxyUrl, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
                 }
-            });
+                
+                const text = await response.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(text, 'text/html');
+                
+                // Extract meaningful content from the page
+                const content = extractContent(doc);
+                return content;
+            } catch (error) {
+                console.warn(`Error with proxy ${proxy}:`, error);
+                lastError = error;
+                // Continue to the next proxy
+            }
+        }
+        
+        // If we're here, try a direct fetch as last resort
+        try {
+            console.log("Trying direct fetch as last resort...");
+            const response = await fetch(url);
             
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -178,11 +213,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const parser = new DOMParser();
             const doc = parser.parseFromString(text, 'text/html');
             
-            // Extract meaningful content from the page
             const content = extractContent(doc);
             return content;
-        } catch (error) {
-            throw new Error(`CORS error: ${error.message}`);
+        } catch (directError) {
+            console.error("All proxies failed, direct fetch also failed:", directError);
+            throw new Error(`Unable to access the website. Please try another website or check your connection. Technical details: ${lastError?.message || directError.message}`);
         }
     };
 
