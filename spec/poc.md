@@ -109,8 +109,14 @@ WebBrainPOC/
 The WebBrain POC will integrate with the OpenAI API using the assistant API to process website content and user questions. The integration follows these steps:
 
 1. **Prompt Configuration**
-   - A pre-configured system prompt instructs the model to act as an expert on the website content
-   - The extracted website content is included in the context
+   - A pre-configured system prompt instructs the model as follows:
+   
+   ```
+   You are an friendly AI assistant to help users learn more about the website content. You are expected to always respond with references. For example, if I ask you "What is Numbers Protocol?", you will reply "Based on https://numbersprotocol.io, it is a decentralized network". You will do your best to look for answers from the website content instead of the pre-existing memory. Here is the website content:
+   
+   [WEBSITE_CONTENT_PLACEHOLDER]
+   ```
+   - The `[WEBSITE_CONTENT_PLACEHOLDER]` is replaced with the actual extracted website content
    - User questions are processed within this context
 
 2. **API Interaction**
