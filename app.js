@@ -35,14 +35,50 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const renderUrls = () => {
         urlList.innerHTML = '';
-        urls.forEach(url => {
+        urls.forEach((url, index) => {
             const li = document.createElement('li');
             li.innerHTML = `
                 <span class="url-title">${url.title}</span>
-                <span class="url-status ${url.status}">${url.status}</span>
+                <div class="url-actions">
+                    <span class="url-status ${url.status}">${url.status}</span>
+                    <button class="delete-url-btn" data-index="${index}">×</button>
+                </div>
             `;
             urlList.appendChild(li);
         });
+        
+        // Add event listeners to delete buttons
+        document.querySelectorAll('.delete-url-btn').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const index = e.target.dataset.index;
+                deleteUrl(index);
+            });
+        });
+    };
+
+    const deleteUrl = (index) => {
+        // Remove the URL from the array
+        urls.splice(index, 1);
+        
+        // Update localStorage
+        localStorage.setItem('urls', JSON.stringify(urls));
+        
+        // Re-render the URL list
+        renderUrls();
+        
+        // If we deleted all URLs, clear the chat and disable it
+        if (urls.length === 0) {
+            chatHistory = [];
+            localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
+            localStorage.removeItem('websiteContent');
+            currentWebsiteContent = '';
+            renderChat();
+            chatInput.disabled = true;
+            sendMessageBtn.disabled = true;
+        } else if (urls.some(url => url.status === 'ready')) {
+            // If there's still at least one processed URL, ensure chat is enabled
+            enableChat();
+        }
     };
 
     const renderChat = () => {
