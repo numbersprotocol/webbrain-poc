@@ -254,6 +254,7 @@ The `style.css` file will contain:
 ### OpenAI API Requirements
 
 - API Key management (client-side for POC, with appropriate warnings)
+- Store the OpenAI API Key in the browser. If the API Key does not exist, use the pop-up dialog to ask the user to provide
 - Endpoints needed:
   - Chat completion
 
