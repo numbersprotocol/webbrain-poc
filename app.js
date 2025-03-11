@@ -484,10 +484,32 @@ document.addEventListener('DOMContentLoaded', () => {
         const corsProxies = [
             'https://corsproxy.io/?',
             'https://api.allorigins.win/raw?url=',
-            'https://cors-anywhere.herokuapp.com/'
+            'https://cors-anywhere.herokuapp.com/',
+            'https://crossorigin.me/',
+            'https://thingproxy.freeboard.io/fetch/'
         ];
         
         let lastError = null;
+        
+        // Try with the more flexible allorigins.win/get approach first (includes response headers)
+        try {
+            const allOriginsProxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}&charset=UTF-8`;
+            console.log(`Trying enhanced AllOrigins proxy for URL: ${url}`);
+            
+            const response = await fetch(allOriginsProxyUrl);
+            
+            if (response.ok) {
+                const data = await response.json();
+                if (data && data.contents) {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(data.contents, 'text/html');
+                    const content = extractContent(doc);
+                    return content;
+                }
+            }
+        } catch (error) {
+            console.warn(`Error with enhanced AllOrigins proxy:`, error);
+        }
         
         // Try each proxy in sequence with standard mode
         for (const proxy of corsProxies) {
@@ -497,7 +519,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 const response = await fetch(proxyUrl, {
                     headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
                     }
                 });
                 
@@ -525,16 +548,25 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch(url, { 
                 mode: 'no-cors',
                 cache: 'no-cache',
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                }
             });
             
-            // Note: With no-cors, we can't read the response directly
-            // This is more of a connectivity check
             console.log("Got a response with no-cors mode");
             
             // Instead, we'll use iframe-based scraping
             return await extractContentViaIframe(url);
         } catch (directError) {
             console.error("Direct fetch with no-cors failed:", directError);
+        }
+
+        // Try an alternative "soft" scrape approach
+        try {
+            console.log("Trying alternate extraction method...");
+            return await extractWithMetadata(url);
+        } catch (metaError) {
+            console.error("Metadata extraction failed:", metaError);
         }
         
         // Fallback to our final method: Google's cached version
@@ -642,6 +674,56 @@ document.addEventListener('DOMContentLoaded', () => {
             Full Text:
             ${doc.body.innerText}
         `;
+    };
+
+    // Add a new function to extract basic metadata when full content isn't available
+    const extractWithMetadata = async (url) => {
+        try {
+            // Extract domain from URL
+            const urlObj = new URL(url);
+            const domain = urlObj.hostname;
+            const pathname = urlObj.pathname;
+            
+            // Use search engines to find basic information
+            const description = `This appears to be content from ${domain}${pathname}.`;
+            
+            // Try to guess page title from URL path
+            let title = domain;
+            if (pathname && pathname !== '/') {
+                // Clean up the pathname to create something readable
+                const pathSegments = pathname.split('/').filter(segment => segment.length > 0);
+                if (pathSegments.length > 0) {
+                    // Convert last segment from slug to title (e.g., "my-article-title" -> "My Article Title")
+                    const lastSegment = pathSegments[pathSegments.length - 1];
+                    const cleanTitle = lastSegment
+                        .replace(/[-_]/g, ' ')
+                        .replace(/\.html$|\.php$|\.asp$/i, '')
+                        .split(' ')
+                        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                        .join(' ');
+                        
+                    title = cleanTitle || title;
+                }
+            }
+            
+            // Create a basic content structure with available information
+            return `
+                Website Title: ${title}
+                
+                URL: ${url}
+                
+                Domain: ${domain}
+                
+                Description: ${description}
+                
+                Note: Full content extraction was not possible. This is limited information derived from the URL.
+                
+                To learn more about this website, please visit it directly at ${url}.
+            `;
+        } catch (error) {
+            console.error("Metadata extraction failed:", error);
+            throw error;
+        }
     };
 
     const processChat = async (userMessage) => {
