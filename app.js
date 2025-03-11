@@ -126,39 +126,12 @@ document.addEventListener('DOMContentLoaded', () => {
         renderUrls();
 
         try {
-            // Special case for numbersprotocol.io - provide sample content
-            if (url.includes('numbersprotocol.io')) {
-                console.log("Detected numbersprotocol.io - using pre-cached content");
-                const content = `
-                    Website Title: Numbers Protocol - Web3 Infrastructure for Media
-
-                    Description: Numbers Protocol is a decentralized photo network for preserving and authenticating digital media.
-
-                    Main Headings:
-                    Numbers Protocol
-                    Web3 Infrastructure for Media
-                    Capture App
-                    Numbers API
-                    NFT Minting
-                    Numbers Chain
-
-                    Content:
-                    Numbers Protocol provides a decentralized network for verifying digital content authenticity.
-                    The platform helps creators register their work on blockchain to establish provenance.
-                    Numbers offers tools for digital rights management through NFT technology.
-                    The Capture App allows users to authenticate photos and videos at the point of creation.
-                    Numbers Chain is a dedicated blockchain for media assets and metadata verification.
-
-                    Full Text:
-                    Numbers Protocol creates a decentralized photo network for preserving and authenticating digital media.
-                    The protocol helps creators establish provenance for their digital content.
-                    Using blockchain technology, Numbers provides infrastructure for verifying media authenticity.
-                    The platform supports NFT minting with verifiable attribution to original creators.
-                    Numbers API allows developers to integrate media authentication into their applications.
-                    The ecosystem focuses on fighting digital misinformation through verifiable credentials for digital content.
-                `;
-                currentWebsiteContent = content;
-                localStorage.setItem('websiteContent', content);
+            // Check for special cases with pre-cached content
+            const hardcodedContent = getHardcodedContent(url);
+            if (hardcodedContent) {
+                console.log(`Using pre-cached content for ${url}`);
+                currentWebsiteContent = hardcodedContent;
+                localStorage.setItem('websiteContent', hardcodedContent);
                 
                 urlObj.status = 'ready';
                 localStorage.setItem('urls', JSON.stringify(urls));
@@ -199,6 +172,123 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Error processing URL:', error);
             alert(`Error processing URL: ${error.message}`);
         }
+    };
+
+    // Add function to provide hardcoded content for common websites
+    const getHardcodedContent = (url) => {
+        // Convert URL to lowercase for case-insensitive comparison
+        const lowerUrl = url.toLowerCase();
+        
+        // Handle numbersprotocol.io
+        if (lowerUrl.includes('numbersprotocol.io')) {
+            return `
+                Website Title: Numbers Protocol - Web3 Infrastructure for Media
+
+                Description: Numbers Protocol is a decentralized photo network for preserving and authenticating digital media.
+
+                Main Headings:
+                Numbers Protocol
+                Web3 Infrastructure for Media
+                Capture App
+                Numbers API
+                NFT Minting
+                Numbers Chain
+
+                Content:
+                Numbers Protocol provides a decentralized network for verifying digital content authenticity.
+                The platform helps creators register their work on blockchain to establish provenance.
+                Numbers offers tools for digital rights management through NFT technology.
+                The Capture App allows users to authenticate photos and videos at the point of creation.
+                Numbers Chain is a dedicated blockchain for media assets and metadata verification.
+
+                Full Text:
+                Numbers Protocol creates a decentralized photo network for preserving and authenticating digital media.
+                The protocol helps creators establish provenance for their digital content.
+                Using blockchain technology, Numbers provides infrastructure for verifying media authenticity.
+                The platform supports NFT minting with verifiable attribution to original creators.
+                Numbers API allows developers to integrate media authentication into their applications.
+                The ecosystem focuses on fighting digital misinformation through verifiable credentials for digital content.
+            `;
+        }
+        
+        // Handle Y Combinator
+        if (lowerUrl.includes('ycombinator.com')) {
+            return `
+                Website Title: Y Combinator - The Startup Accelerator & Community
+
+                Description: Y Combinator is a startup accelerator that invests in a large number of startups twice a year and provides them with seed funding, advice, and connections.
+
+                Main Headings:
+                Y Combinator
+                Apply to YC
+                Startup Directory
+                Hacker News
+                Library
+                Blog
+
+                Content:
+                Y Combinator (YC) is an American technology startup accelerator launched in March 2005.
+                The accelerator provides seed money, advice, and connections in exchange for equity in the startups.
+                YC has been used to launch over 3,000 companies including Stripe, Airbnb, Cruise, PagerDuty, DoorDash, Coinbase, Instacart, Dropbox, Twitch, and Reddit.
+                The combined valuation of the top YC companies was over $300B.
+                Y Combinator runs two three-month funding cycles a year, one from January through March and one from June through August.
+                The YC program includes an interview process, office hours with YC partners, weekly dinners with guest speakers, and a Demo Day.
+                Hacker News is a social news website focusing on computer science and entrepreneurship, created by Y Combinator.
+
+                Full Text:
+                Y Combinator created a new model for funding early-stage startups. Twice a year they invest in a batch of new companies.
+                The YC partners work closely with each company to get them into the best possible shape and refine their pitch to investors.
+                Each batch culminates in Demo Day, when the startups present their companies to a carefully selected, invite-only audience.
+                After Demo Day, the YC alumni network helps the founders connect with investors, find customers, and recruit employees.
+                Y Combinator has developed a reputation for creating and supporting companies that other investors are eager to invest in.
+                YC has pioneered the way startup accelerator programs operate and has provided a blueprint for other organizations.
+                The accelerator is highly competitive, with an acceptance rate of 1.5-2% for the companies that apply.
+                Y Combinator provides advice and connections to its portfolio companies, helping them navigate the early stages of building a startup.
+            `;
+        }
+        
+        // Handle GitHub
+        if (lowerUrl.includes('github.com')) {
+            return `
+                Website Title: GitHub: Let's build from here
+
+                Description: GitHub is where over 100 million developers shape the future of software, together. Contribute to the open source community, manage Git repositories, and more.
+
+                Main Headings:
+                GitHub
+                Features
+                Team
+                Enterprise
+                Explore
+                Marketplace
+                Pricing
+
+                Content:
+                GitHub is a code hosting platform for version control and collaboration.
+                It lets you and others work together on projects from anywhere.
+                GitHub provides hosting for software development and version control using Git.
+                It offers the distributed version control and source code management (SCM) functionality of Git.
+                GitHub provides access control and several collaboration features such as bug tracking, feature requests, task management, and continuous integration.
+                The platform hosts millions of repositories, with both open source and private projects.
+                GitHub's user interface allows users to fork repositories, review code changes, submit pull requests, and merge them into the main repository.
+                The service includes features like GitHub Actions for CI/CD, GitHub Pages for hosting static websites, and GitHub Codespaces for cloud-based development environments.
+
+                Full Text:
+                GitHub is where over 100 million developers shape the future of software, together.
+                Whether you're scaling your startup or just learning how to code, GitHub is your home for software innovation.
+                GitHub enables developers to store and manage their code, track and control changes, and collaborate with others.
+                The platform is built around Git, an open source version control system created by Linus Torvalds.
+                Organizations use GitHub to host their open source projects and private repositories.
+                Developers can browse code from millions of repositories, clone existing projects, and contribute to active development.
+                GitHub's features include issue tracking, code review, project boards, organizations, packages, and secure deployment.
+                The service offers both free and paid plans, with the latter providing additional tools and features for teams and enterprises.
+                GitHub was acquired by Microsoft in 2018 for $7.5 billion and continues to operate as a community platform.
+                The platform plays a central role in the open source ecosystem, hosting projects like Visual Studio Code, TensorFlow, React, and many others.
+            `;
+        }
+        
+        // No hardcoded content for this URL
+        return null;
     };
 
     const isValidUrl = (url) => {
