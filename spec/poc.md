@@ -37,6 +37,7 @@ The application will feature a two-column layout with a clean, professional desi
    - Send button
 
 4. **Initial Popup**
+   - Modal dialog requesting OpenAI API key input (for the first time)
    - Modal dialog requesting website URL input
    - Clear call-to-action button
    - Brief explanation of functionality
