@@ -125,6 +125,44 @@ The WebBrain POC will integrate with the OpenAI API using the assistant API to p
    - API returns responses based on the provided content and question
    - Rate limits and token usage are managed appropriately
 
+3. **Implementation Example**
+
+```
+// Prepare messages for OpenAI
+const openAiMessages = [
+  { 
+    role: 'system', 
+    content: `You are an friendly AI assistant to help users learn more about the website content. You are expected to always respond with references. For example, if I ask you "What is Numbers Protocol?", you will reply "Based on https://numbersprotocol.io, it is a decentralized network". You will do your best to look for answers from the website content instead of the pre-existing memory. Here is the website content:
+    
+    ${websiteContent}`
+  },
+  { 
+    role: 'user', 
+    content: userQuestion
+  }
+];
+
+// OpenAI API call
+const openaiResponse = await axios.post(
+  'https://api.openai.com/v1/chat/completions',
+  {
+    model: 'gpt-4o',
+    messages: openAiMessages,
+    // Optional parameters
+    temperature: 0.7,
+    //max_tokens: 1000,
+  },
+  {
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+    }
+  }
+);
+
+// Extract the AI response
+const aiResponse = openaiResponse.data.choices[0].message.content;
+```
 3. **API Endpoints Used**
    - `POST /chat/completions` - For chat interactions using the provided content
 
