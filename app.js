@@ -126,8 +126,9 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const fetchWebsiteContent = async (url) => {
+        const corsProxy = 'https://cors-anywhere.herokuapp.com/';
         try {
-            const response = await fetch(`https://cors-anywhere.herokuapp.com/${url}`, {
+            const response = await fetch(`${corsProxy}${url}`, {
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest'
                 }
@@ -145,23 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const content = extractContent(doc);
             return content;
         } catch (error) {
-            // Try direct fetch as fallback
-            try {
-                const response = await fetch(url);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
-                const text = await response.text();
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(text, 'text/html');
-                
-                // Extract meaningful content from the page
-                const content = extractContent(doc);
-                return content;
-            } catch (directError) {
-                throw new Error(`CORS error: ${directError.message}`);
-            }
+            throw new Error(`CORS error: ${error.message}`);
         }
     };
 
