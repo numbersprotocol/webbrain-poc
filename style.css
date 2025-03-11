@@ -1,0 +1,311 @@
+/* Global Styles and CSS Variables */
+:root {
+    --color-primary: #3CB371; /* WebBrain brand green */
+    --color-primary-light: #D9F2E6;
+    --color-primary-dark: #2E8B57;
+    --color-background: #FFFFFF;
+    --color-card-background: #FFFFFF;
+    --color-chat-background: #F9F9F9;
+    --color-text: #333333;
+    --color-text-light: #666666;
+    --color-border: #E0E0E0;
+    --color-success: #28A745;
+    --color-warning: #FFC107;
+    --color-error: #DC3545;
+    --color-disabled: #CCCCCC;
+}
+
+/* Reset and Base Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    background-color: var(--color-background);
+    color: var(--color-text);
+    line-height: 1.6;
+}
+
+/* Layout */
+.app-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.app-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.logo-icon {
+    height: 40px;
+    width: 40px;
+    background-color: var(--color-primary);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 20px;
+}
+
+.logo h1 {
+    font-size: 28px;
+    color: var(--color-primary);
+}
+
+.tagline {
+    font-size: 16px;
+    color: var(--color-text-light);
+    margin-top: 5px;
+}
+
+.app-content {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 30px;
+    flex: 1;
+}
+
+/* Columns */
+.sources-column,
+.chat-column {
+    background-color: var(--color-card-background);
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    display: flex;
+    flex-direction: column;
+}
+
+/* Section Headers */
+h2 {
+    font-size: 18px;
+    margin-bottom: 20px;
+    color: var(--color-text);
+    font-weight: 600;
+}
+
+/* URL Input */
+.url-input-container {
+    display: flex;
+    margin-bottom: 20px;
+}
+
+.url-input-container input {
+    flex: 1;
+    padding: 10px 15px;
+    border: 1px solid var(--color-border);
+    border-radius: 4px 0 0 4px;
+    font-size: 14px;
+}
+
+.url-input-container button {
+    padding: 10px 15px;
+    background-color: var(--color-primary);
+    color: white;
+    border: none;
+    border-radius: 0 4px 4px 0;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.url-input-container button:hover {
+    background-color: var(--color-primary-dark);
+}
+
+/* URL List */
+.url-list {
+    list-style: none;
+    margin-bottom: auto;
+}
+
+.url-list li {
+    padding: 12px 15px;
+    border-bottom: 1px solid var(--color-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.url-list li:last-child {
+    border-bottom: none;
+}
+
+.url-title {
+    font-weight: 500;
+    color: var(--color-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 65%;
+}
+
+.url-status {
+    font-size: 12px;
+    padding: 3px 8px;
+    border-radius: 3px;
+    background-color: var(--color-background);
+}
+
+.url-status.loading {
+    color: var(--color-warning);
+}
+
+.url-status.ready {
+    color: var(--color-success);
+}
+
+.url-status.error {
+    color: var(--color-error);
+}
+
+/* Chat Container */
+.chat-container {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow-y: auto;
+    margin-bottom: 20px;
+    padding: 10px;
+    background-color: var(--color-chat-background);
+    border-radius: 4px;
+}
+
+.welcome-message {
+    text-align: center;
+    color: var(--color-text-light);
+    margin: 40px 0;
+}
+
+.message {
+    max-width: 80%;
+    padding: 12px 15px;
+    margin-bottom: 15px;
+    border-radius: 8px;
+    word-wrap: break-word;
+}
+
+.message.user {
+    align-self: flex-end;
+    background-color: var(--color-primary-light);
+    color: var(--color-text);
+}
+
+.message.ai {
+    align-self: flex-start;
+    background-color: var(--color-background);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+}
+
+/* Chat Input */
+.chat-input-container {
+    display: flex;
+    margin-top: auto;
+}
+
+.chat-input-container input {
+    flex: 1;
+    padding: 12px 15px;
+    border: 1px solid var(--color-border);
+    border-radius: 4px 0 0 4px;
+    font-size: 14px;
+}
+
+.chat-input-container button {
+    padding: 12px 20px;
+    background-color: var(--color-primary);
+    color: white;
+    border: none;
+    border-radius: 0 4px 4px 0;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.chat-input-container button:disabled {
+    background-color: var(--color-disabled);
+    cursor: not-allowed;
+}
+
+/* Modal */
+.modal-overlay {
+    display: flex;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background-color: var(--color-card-background);
+    padding: 30px;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.modal-content h2 {
+    margin-bottom: 15px;
+    color: var(--color-primary);
+}
+
+.modal-content p {
+    margin-bottom: 20px;
+}
+
+/* Status Indicators */
+.status-indicator {
+    display: flex;
+    align-items: center;
+    margin-top: 10px;
+}
+
+.status-indicator .spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(0, 0, 0, 0.1);
+    border-top-color: var(--color-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-right: 8px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .app-content {
+        grid-template-columns: 1fr;
+    }
+    
+    .sources-column {
+        margin-bottom: 20px;
+    }
+}
