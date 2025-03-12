@@ -283,7 +283,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 `${normalizedUrl}/sitemapindex.xml`
             ];
             
-            let sitemapXml = null;
+            let sitemapData = null;
             
             for (const sitemapUrl of potentialSitemapUrls) {
                 try {
@@ -293,32 +293,52 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Fetch the sitemap content from the lambda function
                     const response = await fetch(lambdaUrl);
                     if (response.ok) {
-                        sitemapXml = await response.text();
-                        console.log(`Successfully retrieved sitemap from ${sitemapUrl}. Content preview:`, sitemapXml.substring(0, 500) + (sitemapXml.length > 500 ? '...' : ''));
-                        break; // Exit loop if we successfully fetch a sitemap
+                        const jsonResponse = await response.json();
+                        
+                        if (jsonResponse.success) {
+                            sitemapData = jsonResponse.data;
+                            console.log(`Successfully retrieved sitemap from ${sitemapUrl}. Type: ${sitemapData.type}`);
+                            break; // Exit loop if we successfully fetch a sitemap
+                        }
                     }
                 } catch (error) {
                     console.warn(`Failed to fetch sitemap from ${sitemapUrl}:`, error);
                 }
             }
             
-            if (!sitemapXml) {
+            if (!sitemapData) {
                 throw new Error('Failed to fetch any sitemap');
             }
             
-            // Process the fetched sitemap content to extract URLs
-            const parser = new DOMParser();
-            const xmlDoc = parser.parseFromString(sitemapXml, 'text/xml');
-            const urlElements = xmlDoc.querySelectorAll('url > loc');
+            // Extract URLs based on the sitemap type
+            let urlList = [];
             
-            if (urlElements.length > 0) {
+            if (sitemapData.type === 'standard_sitemap' && sitemapData.urls) {
+                // Extract URLs from standard sitemap
+                urlList = sitemapData.urls.map(url => url.loc).filter(loc => loc);
+                console.log(`Found ${urlList.length} URLs in standard sitemap`);
+            } else if (sitemapData.type === 'sitemap_index' && sitemapData.sitemaps) {
+                // Extract sitemap URLs from sitemap index
+                urlList = sitemapData.sitemaps.map(sitemap => sitemap.loc).filter(loc => loc);
+                console.log(`Found ${urlList.length} sitemap references in sitemap index`);
+            } else {
+                console.log(`Unrecognized sitemap type: ${sitemapData.type}`);
+            }
+            
+            if (urlList.length > 0) {
                 let addedCount = 0;
                 
-                for (let i = 0; i < urlElements.length && addedCount < 3; i++) {
-                    const subUrl = urlElements[i].textContent;
+                for (let i = 0; i < urlList.length && addedCount < 3; i++) {
+                    const subUrl = urlList[i];
                     
                     // Skip if it's the same as the base URL or already in our list
                     if (subUrl === baseUrl || urls.some(u => u.title === subUrl)) {
+                        continue;
+                    }
+                    
+                    // Skip if it's a sitemap file rather than a content URL (for sitemap index case)
+                    if (sitemapData.type === 'sitemap_index' && subUrl.endsWith('.xml')) {
+                        console.log(`Skipping sitemap reference: ${subUrl}`);
                         continue;
                     }
                     
