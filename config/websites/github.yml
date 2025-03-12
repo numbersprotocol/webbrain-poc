@@ -1,0 +1,35 @@
+website_content: |
+  Website Title: GitHub: Let's build from here
+
+  Description: GitHub is where over 100 million developers shape the future of software, together. Contribute to the open source community, manage Git repositories, and more.
+
+  Main Headings:
+  GitHub
+  Features
+  Team
+  Enterprise
+  Explore
+  Marketplace
+  Pricing
+
+  Content:
+  GitHub is a code hosting platform for version control and collaboration.
+  It lets you and others work together on projects from anywhere.
+  GitHub provides hosting for software development and version control using Git.
+  It offers the distributed version control and source code management (SCM) functionality of Git.
+  GitHub provides access control and several collaboration features such as bug tracking, feature requests, task management, and continuous integration.
+  The platform hosts millions of repositories, with both open source and private projects.
+  GitHub's user interface allows users to fork repositories, review code changes, submit pull requests, and merge them into the main repository.
+  The service includes features like GitHub Actions for CI/CD, GitHub Pages for hosting static websites, and GitHub Codespaces for cloud-based development environments.
+
+  Full Text:
+  GitHub is where over 100 million developers shape the future of software, together.
+  Whether you're scaling your startup or just learning how to code, GitHub is your home for software innovation.
+  GitHub enables developers to store and manage their code, track and control changes, and collaborate with others.
+  The platform is built around Git, an open source version control system created by Linus Torvalds.
+  Organizations use GitHub to host their open source projects and private repositories.
+  Developers can browse code from millions of repositories, clone existing projects, and contribute to active development.
+  GitHub's features include issue tracking, code review, project boards, organizations, packages, and secure deployment.
+  The service offers both free and paid plans, with the latter providing additional tools and features for teams and enterprises.
+  GitHub was acquired by Microsoft in 2018 for $7.5 billion and continues to operate as a community platform.
+  The platform plays a central role in the open source ecosystem, hosting projects like Visual Studio Code, TensorFlow, React, and many others.
