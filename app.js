@@ -294,6 +294,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const response = await fetch(lambdaUrl);
                     if (response.ok) {
                         sitemapXml = await response.text();
+                        console.log(`Successfully retrieved sitemap from ${sitemapUrl}. Content preview:`, sitemapXml.substring(0, 500) + (sitemapXml.length > 500 ? '...' : ''));
                         break; // Exit loop if we successfully fetch a sitemap
                     }
                 } catch (error) {
