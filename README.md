@@ -24,6 +24,8 @@ When contributing to this POC, please follow these guidelines:
 
 3. **Keep It Simple**: Focus on minimal and clean implementations. Scalability is not a primary concern at this POC stage - prioritize functionality and clear code over complex optimizations.
 
+4. **Configuration**: The system prompt for AI interactions can be modified in the `config/prompts.yml` file without changing the application code.
+
 ## Technology Stack
 
 - **Frontend**: Vanilla JavaScript

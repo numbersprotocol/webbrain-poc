@@ -16,16 +16,58 @@ document.addEventListener('DOMContentLoaded', () => {
     let urls = JSON.parse(localStorage.getItem('urls')) || [];
     let chatHistory = JSON.parse(localStorage.getItem('chatHistory')) || [];
     let currentWebsiteContent = '';
+    let systemPrompt = ''; // Will store the loaded prompt template
 
-    // Check if API key exists, if not show the API key modal
-    if (!localStorage.getItem('openaiApiKey')) {
-        apiKeyModal.style.display = 'flex';
-    }
+    // Load the system prompt from the YAML file
+    const loadSystemPrompt = async () => {
+        try {
+            const response = await fetch('config/prompts.yml');
+            if (!response.ok) {
+                throw new Error(`Failed to load prompt config: ${response.status}`);
+            }
+            const yamlText = await response.text();
+            // Simple YAML parsing for the system_prompt field
+            const match = yamlText.match(/system_prompt:\s*\|\s*([\s\S]+?)(?:$|(?=\n\w+:))/);
+            if (match && match[1]) {
+                systemPrompt = match[1].trim();
+                console.log('System prompt loaded successfully');
+            } else {
+                throw new Error('Could not parse system_prompt from YAML');
+            }
+        } catch (error) {
+            console.error('Error loading system prompt:', error);
+            // Fallback to default prompt if loading fails
+            systemPrompt = `You are an friendly AI assistant to help users learn more about the website content. You are expected to always respond with references. For example, if I ask you "What is Numbers Protocol?", you will reply "Based on https://numbersprotocol.io, it is a decentralized network". You will do your best to look for answers from the website content instead of the pre-existing memory. Here is the website content:
+            
+            [WEBSITE_CONTENT_PLACEHOLDER]`;
+        }
+    };
 
-    // Check if we have existing URLs and hide the URL modal if we do
-    if (urls.length > 0) {
-        urlModal.style.display = 'none';
-    }
+    // Initialize the application
+    const initApp = async () => {
+        await loadSystemPrompt();
+        
+        // Check if API key exists, if not show the API key modal
+        if (!localStorage.getItem('openaiApiKey')) {
+            apiKeyModal.style.display = 'flex';
+        }
+    
+        // Check if we have existing URLs and hide the URL modal if we do
+        if (urls.length > 0) {
+            urlModal.style.display = 'none';
+        }
+        
+        // Initialize UI
+        renderUrls();
+        renderChat();
+    
+        // If we have processed URLs, enable the chat
+        if (urls.some(url => url.status === 'ready')) {
+            enableChat();
+            // Also ensure the URL modal is hidden
+            urlModal.style.display = 'none';
+        }
+    };
 
     // Save API key
     apiKeySaveBtn.addEventListener('click', () => {
@@ -734,13 +776,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
+            // Get website content
+            const websiteContent = currentWebsiteContent || localStorage.getItem('websiteContent');
+            
+            // Replace placeholder in the system prompt with actual content
+            const promptWithContent = systemPrompt.replace('[WEBSITE_CONTENT_PLACEHOLDER]', websiteContent);
+            
             // Prepare messages for OpenAI
             const openAiMessages = [
                 { 
                     role: 'system', 
-                    content: `You are a friendly AI assistant to help users learn more about the website content. You are expected to always respond with references. For example, if I ask you "What is Numbers Protocol?", you will reply "Based on https://numbersprotocol.io, it is a decentralized network". You will do your best to look for answers from the website content instead of the pre-existing memory. Here is the website content:
-                    
-                    ${currentWebsiteContent || localStorage.getItem('websiteContent')}`
+                    content: promptWithContent
                 },
                 { 
                     role: 'user', 
@@ -880,14 +926,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Initialize UI
-    renderUrls();
-    renderChat();
-
-    // If we have processed URLs, enable the chat
-    if (urls.some(url => url.status === 'ready')) {
-        enableChat();
-        // Also ensure the URL modal is hidden
-        urlModal.style.display = 'none';
-    }
+    // Start the application
+    initApp();
 });
