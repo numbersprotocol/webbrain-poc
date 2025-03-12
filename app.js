@@ -274,158 +274,47 @@ document.addEventListener('DOMContentLoaded', () => {
             // Remove trailing slash if present
             const normalizedUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
             
-            // Common sitemap locations
-            const sitemapUrls = [
-                `${normalizedUrl}/sitemap.xml`,
-                `${normalizedUrl}/sitemap_index.xml`,
-                `${normalizedUrl}/sitemap-index.xml`,
-                `${normalizedUrl}/wp-sitemap.xml`
-            ];
+            // Fetch sitemap using the get-sitemap lambda function
+            const lambdaUrl = `https://zhwikvdhwd.execute-api.us-east-1.amazonaws.com/default/get-sitemap?url=${encodeURIComponent(normalizedUrl)}`;
+            const response = await fetch(lambdaUrl);
             
-            // Extract domain for constructing absolute URLs if needed
-            const urlObj = new URL(baseUrl);
-            const domain = `${urlObj.protocol}//${urlObj.hostname}`;
-            
-            // Try to fetch sitemap from common locations
-            let sitemapXml = null;
-            let sitemapUrl = null;
-            
-            for (const potentialUrl of sitemapUrls) {
-                console.log(`Looking for sitemap at: ${potentialUrl}`);
-                try {
-                    // Try to fetch the sitemap using our cors proxy
-                    const corsProxy = 'https://corsproxy.io/?';
-                    const response = await fetch(`${corsProxy}${encodeURIComponent(potentialUrl)}`, {
-                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                    });
-                    
-                    if (response.ok) {
-                        sitemapXml = await response.text();
-                        sitemapUrl = potentialUrl;
-                        console.log(`Found sitemap at: ${sitemapUrl}`);
-                        break;
-                    }
-                } catch (error) {
-                    console.warn(`Error fetching sitemap from ${potentialUrl}:`, error);
-                    // Continue to the next URL
-                }
+            if (!response.ok) {
+                throw new Error(`Failed to fetch sitemap: ${response.status}`);
             }
             
-            // If we didn't find a sitemap, try to guess it from robots.txt
-            if (!sitemapXml) {
-                try {
-                    console.log('Looking for sitemap references in robots.txt');
-                    const robotsUrl = `${domain}/robots.txt`;
-                    const corsProxy = 'https://corsproxy.io/?';
-                    
-                    const response = await fetch(`${corsProxy}${encodeURIComponent(robotsUrl)}`, {
-                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                    });
-                    
-                    if (response.ok) {
-                        const robotsTxt = await response.text();
-                        // Look for Sitemap: directive in robots.txt
-                        const sitemapMatches = robotsTxt.match(/^Sitemap:\s*(.+)$/mi);
-                        if (sitemapMatches && sitemapMatches[1]) {
-                            const sitemapUrlFromRobots = sitemapMatches[1].trim();
-                            console.log(`Found sitemap reference in robots.txt: ${sitemapUrlFromRobots}`);
-                            
-                            // Fetch the sitemap from the URL found in robots.txt
-                            const sitemapResponse = await fetch(`${corsProxy}${encodeURIComponent(sitemapUrlFromRobots)}`, {
-                                headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                            });
-                            
-                            if (sitemapResponse.ok) {
-                                sitemapXml = await sitemapResponse.text();
-                                sitemapUrl = sitemapUrlFromRobots;
-                            }
-                        }
-                    }
-                } catch (error) {
-                    console.warn('Error processing robots.txt:', error);
-                }
-            }
+            const sitemapXml = await response.text();
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(sitemapXml, 'text/xml');
             
-            // If we found a sitemap, parse it and add up to 3 URLs
-            if (sitemapXml) {
-                console.log('Parsing sitemap content');
-                const parser = new DOMParser();
-                const xmlDoc = parser.parseFromString(sitemapXml, 'text/xml');
+            // Look for URLs in the sitemap
+            const urlElements = xmlDoc.querySelectorAll('url > loc');
+            
+            if (urlElements.length > 0) {
+                let addedCount = 0;
                 
-                // Look for URLs in the sitemap
-                const urlElements = xmlDoc.querySelectorAll('url > loc');
+                for (let i = 0; i < urlElements.length && addedCount < 3; i++) {
+                    const subUrl = urlElements[i].textContent;
+                    
+                    // Skip if it's the same as the base URL or already in our list
+                    if (subUrl === baseUrl || urls.some(u => u.title === subUrl)) {
+                        continue;
+                    }
+                    
+                    console.log(`Adding subpage from sitemap: ${subUrl}`);
+                    
+                    // Add this URL to the list but don't process it yet
+                    const urlObj = { title: subUrl, status: 'ready' };
+                    urls.push(urlObj);
+                    addedCount++;
+                }
                 
-                if (urlElements.length > 0) {
-                    let addedCount = 0;
-                    
-                    for (let i = 0; i < urlElements.length && addedCount < 3; i++) {
-                        const subUrl = urlElements[i].textContent;
-                        
-                        // Skip if it's the same as the base URL or already in our list
-                        if (subUrl === baseUrl || urls.some(u => u.title === subUrl)) {
-                            continue;
-                        }
-                        
-                        console.log(`Adding subpage from sitemap: ${subUrl}`);
-                        
-                        // Add this URL to the list but don't process it yet
-                        const urlObj = { title: subUrl, status: 'ready' };
-                        urls.push(urlObj);
-                        addedCount++;
-                    }
-                    
-                    if (addedCount > 0) {
-                        localStorage.setItem('urls', JSON.stringify(urls));
-                        renderUrls();
-                        alert(`Added ${addedCount} additional pages from the sitemap.`);
-                    }
-                } else {
-                    // Check if this is a sitemap index
-                    const sitemapElements = xmlDoc.querySelectorAll('sitemap > loc');
-                    
-                    if (sitemapElements.length > 0) {
-                        // Get the first sitemap in the index and process it
-                        const firstSitemapUrl = sitemapElements[0].textContent;
-                        console.log(`Found sitemap index, processing first sitemap: ${firstSitemapUrl}`);
-                        
-                        const corsProxy = 'https://corsproxy.io/?';
-                        const sitemapResponse = await fetch(`${corsProxy}${encodeURIComponent(firstSitemapUrl)}`, {
-                            headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                        });
-                        
-                        if (sitemapResponse.ok) {
-                            const subSitemapXml = await sitemapResponse.text();
-                            const subXmlDoc = parser.parseFromString(subSitemapXml, 'text/xml');
-                            const subUrlElements = subXmlDoc.querySelectorAll('url > loc');
-                            
-                            let addedCount = 0;
-                            
-                            for (let i = 0; i < subUrlElements.length && addedCount < 3; i++) {
-                                const subUrl = subUrlElements[i].textContent;
-                                
-                                // Skip if it's the same as the base URL or already in our list
-                                if (subUrl === baseUrl || urls.some(u => u.title === subUrl)) {
-                                    continue;
-                                }
-                                
-                                console.log(`Adding subpage from sitemap index: ${subUrl}`);
-                                
-                                // Add this URL to the list but don't process it yet
-                                const urlObj = { title: subUrl, status: 'ready' };
-                                urls.push(urlObj);
-                                addedCount++;
-                            }
-                            
-                            if (addedCount > 0) {
-                                localStorage.setItem('urls', JSON.stringify(urls));
-                                renderUrls();
-                                alert(`Added ${addedCount} additional pages from the sitemap.`);
-                            }
-                        }
-                    }
+                if (addedCount > 0) {
+                    localStorage.setItem('urls', JSON.stringify(urls));
+                    renderUrls();
+                    alert(`Added ${addedCount} additional pages from the sitemap.`);
                 }
             } else {
-                console.log('No sitemap found for this website');
+                console.log('No URLs found in the sitemap');
             }
         } catch (error) {
             console.error('Error processing sitemap:', error);
@@ -460,165 +349,21 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const fetchWebsiteContent = async (url) => {
-        // List of CORS proxies to try (in order)
-        const corsProxies = [
-            'https://corsproxy.io/?',
-            'https://api.allorigins.win/raw?url=',
-            'https://cors-anywhere.herokuapp.com/',
-            'https://crossorigin.me/',
-            'https://thingproxy.freeboard.io/fetch/'
-        ];
+        // Fetch sitemap using the get-sitemap lambda function
+        const lambdaUrl = `https://zhwikvdhwd.execute-api.us-east-1.amazonaws.com/default/get-sitemap?url=${encodeURIComponent(url)}`;
+        const response = await fetch(lambdaUrl);
         
-        let lastError = null;
-        
-        // Try with the more flexible allorigins.win/get approach first (includes response headers)
-        try {
-            const allOriginsProxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}&charset=UTF-8`;
-            console.log(`Trying enhanced AllOrigins proxy for URL: ${url}`);
-            
-            const response = await fetch(allOriginsProxyUrl);
-            
-            if (response.ok) {
-                const data = await response.json();
-                if (data && data.contents) {
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(data.contents, 'text/html');
-                    const content = extractContent(doc);
-                    return content;
-                }
-            }
-        } catch (error) {
-            console.warn(`Error with enhanced AllOrigins proxy:`, error);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch sitemap: ${response.status}`);
         }
         
-        // Try each proxy in sequence with standard mode
-        for (const proxy of corsProxies) {
-            try {
-                const proxyUrl = `${proxy}${encodeURIComponent(url)}`;
-                console.log(`Trying proxy: ${proxy} for URL: ${url}`);
-                
-                const response = await fetch(proxyUrl, {
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-                    }
-                });
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
-                const text = await response.text();
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(text, 'text/html');
-                
-                // Extract meaningful content from the page
-                const content = extractContent(doc);
-                return content;
-            } catch (error) {
-                console.warn(`Error with proxy ${proxy}:`, error);
-                lastError = error;
-                // Continue to the next proxy
-            }
-        }
+        const sitemapXml = await response.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(sitemapXml, 'text/html');
         
-        // Try with no-cors mode
-        try {
-            console.log("Trying direct fetch with no-cors mode...");
-            const response = await fetch(url, { 
-                mode: 'no-cors',
-                cache: 'no-cache',
-                headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-                }
-            });
-            
-            console.log("Got a response with no-cors mode");
-            
-            // Instead, we'll use iframe-based scraping
-            return await extractContentViaIframe(url);
-        } catch (directError) {
-            console.error("Direct fetch with no-cors failed:", directError);
-        }
-
-        // Try an alternative "soft" scrape approach
-        try {
-            console.log("Trying alternate extraction method...");
-            return await extractWithMetadata(url);
-        } catch (metaError) {
-            console.error("Metadata extraction failed:", metaError);
-        }
-        
-        // Fallback to our final method: Google's cached version
-        try {
-            console.log("Trying Google's cached version...");
-            const googleCache = `https://webcache.googleusercontent.com/search?q=cache:${encodeURIComponent(url)}`;
-            console.log(`Accessing: ${googleCache}`);
-            
-            const response = await fetch(googleCache);
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error from Google cache! status: ${response.status}`);
-            }
-            
-            const text = await response.text();
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(text, 'text/html');
-            
-            const content = extractContent(doc);
-            return content;
-        } catch (cacheError) {
-            console.error("Google cache access failed:", cacheError);
-        }
-
-        // If all methods fail, create some minimal content about the site
-        console.error("All content extraction methods failed");
-        throw new Error(`Unable to access content from ${url}. Please try another website.`);
-    };
-
-    // New function to extract content via an iframe
-    const extractContentViaIframe = (url) => {
-        return new Promise((resolve, reject) => {
-            console.log("Creating iframe for content extraction...");
-            
-            // Create a temporary hidden iframe
-            const iframe = document.createElement('iframe');
-            iframe.style.display = 'none';
-            iframe.src = url;
-            
-            // Set a timeout in case the iframe doesn't load
-            const timeout = setTimeout(() => {
-                document.body.removeChild(iframe);
-                reject(new Error("Iframe loading timed out"));
-            }, 15000); // 15 seconds timeout
-            
-            // When the iframe loads, try to extract content
-            iframe.onload = () => {
-                clearTimeout(timeout);
-                try {
-                    // Try to access the iframe content (may fail due to CORS)
-                    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                    const content = extractContent(iframeDoc);
-                    
-                    // Remove the iframe when done
-                    document.body.removeChild(iframe);
-                    resolve(content);
-                } catch (error) {
-                    document.body.removeChild(iframe);
-                    reject(new Error("Could not access iframe content due to CORS restrictions"));
-                }
-            };
-            
-            // Handle iframe loading errors
-            iframe.onerror = () => {
-                clearTimeout(timeout);
-                document.body.removeChild(iframe);
-                reject(new Error("Failed to load iframe"));
-            };
-            
-            // Add the iframe to the document to start loading
-            document.body.appendChild(iframe);
-        });
+        // Extract meaningful content from the page
+        const content = extractContent(doc);
+        return content;
     };
 
     const extractContent = (doc) => {
@@ -654,56 +399,6 @@ document.addEventListener('DOMContentLoaded', () => {
             Full Text:
             ${doc.body.innerText}
         `;
-    };
-
-    // Add a new function to extract basic metadata when full content isn't available
-    const extractWithMetadata = async (url) => {
-        try {
-            // Extract domain from URL
-            const urlObj = new URL(url);
-            const domain = urlObj.hostname;
-            const pathname = urlObj.pathname;
-            
-            // Use search engines to find basic information
-            const description = `This appears to be content from ${domain}${pathname}.`;
-            
-            // Try to guess page title from URL path
-            let title = domain;
-            if (pathname && pathname !== '/') {
-                // Clean up the pathname to create something readable
-                const pathSegments = pathname.split('/').filter(segment => segment.length > 0);
-                if (pathSegments.length > 0) {
-                    // Convert last segment from slug to title (e.g., "my-article-title" -> "My Article Title")
-                    const lastSegment = pathSegments[pathSegments.length - 1];
-                    const cleanTitle = lastSegment
-                        .replace(/[-_]/g, ' ')
-                        .replace(/\.html$|\.php$|\.asp$/i, '')
-                        .split(' ')
-                        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-                        .join(' ');
-                        
-                    title = cleanTitle || title;
-                }
-            }
-            
-            // Create a basic content structure with available information
-            return `
-                Website Title: ${title}
-                
-                URL: ${url}
-                
-                Domain: ${domain}
-                
-                Description: ${description}
-                
-                Note: Full content extraction was not possible. This is limited information derived from the URL.
-                
-                To learn more about this website, please visit it directly at ${url}.
-            `;
-        } catch (error) {
-            console.error("Metadata extraction failed:", error);
-            throw error;
-        }
     };
 
     const processChat = async (userMessage) => {
