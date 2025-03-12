@@ -14,6 +14,21 @@ WebBrain is a tool that transforms any website into a customized AI. This proof 
 
 2. Open `index.html` in your web browser to run the application.
 
+## Using GitHub Codespaces
+
+If you're developing in a GitHub Codespace environment:
+
+1. Start a simple HTTP server in the terminal:
+   ```
+   python3 -m http.server 8000
+   ```
+   
+2. Codespace will detect the running server and offer to forward the port. Click "Open in Browser" to view the application.
+
+3. If port forwarding isn't automatically prompted, click the "PORTS" tab at the bottom of the screen, then click "Forward a Port" and enter 8000.
+
+4. The application will be accessible via the Codespace URL (usually `https://<your-codespace-name>-8000.preview.app.github.dev/`).
+
 ## Development Instructions
 
 When contributing to this POC, please follow these guidelines:
