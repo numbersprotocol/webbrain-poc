@@ -274,158 +274,69 @@ document.addEventListener('DOMContentLoaded', () => {
             // Remove trailing slash if present
             const normalizedUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
             
-            // Common sitemap locations
-            const sitemapUrls = [
+            // List of potential sitemap URLs
+            const potentialSitemapUrls = [
                 `${normalizedUrl}/sitemap.xml`,
                 `${normalizedUrl}/sitemap_index.xml`,
+                `${normalizedUrl}/sitemap1.xml`,
                 `${normalizedUrl}/sitemap-index.xml`,
-                `${normalizedUrl}/wp-sitemap.xml`
+                `${normalizedUrl}/sitemapindex.xml`
             ];
             
-            // Extract domain for constructing absolute URLs if needed
-            const urlObj = new URL(baseUrl);
-            const domain = `${urlObj.protocol}//${urlObj.hostname}`;
-            
-            // Try to fetch sitemap from common locations
             let sitemapXml = null;
-            let sitemapUrl = null;
             
-            for (const potentialUrl of sitemapUrls) {
-                console.log(`Looking for sitemap at: ${potentialUrl}`);
+            for (const sitemapUrl of potentialSitemapUrls) {
                 try {
-                    // Try to fetch the sitemap using our cors proxy
-                    const corsProxy = 'https://corsproxy.io/?';
-                    const response = await fetch(`${corsProxy}${encodeURIComponent(potentialUrl)}`, {
-                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                    });
+                    // Construct the lambda URL with the target sitemap URL
+                    const lambdaUrl = `https://zhwikvdhwd.execute-api.us-east-1.amazonaws.com/default/get-sitemap?url=${encodeURIComponent(sitemapUrl)}`;
                     
+                    // Fetch the sitemap content from the lambda function
+                    const response = await fetch(lambdaUrl);
                     if (response.ok) {
                         sitemapXml = await response.text();
-                        sitemapUrl = potentialUrl;
-                        console.log(`Found sitemap at: ${sitemapUrl}`);
-                        break;
+                        console.log(`Successfully retrieved sitemap from ${sitemapUrl}. Content preview:`, sitemapXml.substring(0, 500) + (sitemapXml.length > 500 ? '...' : ''));
+                        break; // Exit loop if we successfully fetch a sitemap
                     }
                 } catch (error) {
-                    console.warn(`Error fetching sitemap from ${potentialUrl}:`, error);
-                    // Continue to the next URL
+                    console.warn(`Failed to fetch sitemap from ${sitemapUrl}:`, error);
                 }
             }
             
-            // If we didn't find a sitemap, try to guess it from robots.txt
             if (!sitemapXml) {
-                try {
-                    console.log('Looking for sitemap references in robots.txt');
-                    const robotsUrl = `${domain}/robots.txt`;
-                    const corsProxy = 'https://corsproxy.io/?';
-                    
-                    const response = await fetch(`${corsProxy}${encodeURIComponent(robotsUrl)}`, {
-                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                    });
-                    
-                    if (response.ok) {
-                        const robotsTxt = await response.text();
-                        // Look for Sitemap: directive in robots.txt
-                        const sitemapMatches = robotsTxt.match(/^Sitemap:\s*(.+)$/mi);
-                        if (sitemapMatches && sitemapMatches[1]) {
-                            const sitemapUrlFromRobots = sitemapMatches[1].trim();
-                            console.log(`Found sitemap reference in robots.txt: ${sitemapUrlFromRobots}`);
-                            
-                            // Fetch the sitemap from the URL found in robots.txt
-                            const sitemapResponse = await fetch(`${corsProxy}${encodeURIComponent(sitemapUrlFromRobots)}`, {
-                                headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                            });
-                            
-                            if (sitemapResponse.ok) {
-                                sitemapXml = await sitemapResponse.text();
-                                sitemapUrl = sitemapUrlFromRobots;
-                            }
-                        }
-                    }
-                } catch (error) {
-                    console.warn('Error processing robots.txt:', error);
-                }
+                throw new Error('Failed to fetch any sitemap');
             }
             
-            // If we found a sitemap, parse it and add up to 3 URLs
-            if (sitemapXml) {
-                console.log('Parsing sitemap content');
-                const parser = new DOMParser();
-                const xmlDoc = parser.parseFromString(sitemapXml, 'text/xml');
+            // Process the fetched sitemap content to extract URLs
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(sitemapXml, 'text/xml');
+            const urlElements = xmlDoc.querySelectorAll('url > loc');
+            
+            if (urlElements.length > 0) {
+                let addedCount = 0;
                 
-                // Look for URLs in the sitemap
-                const urlElements = xmlDoc.querySelectorAll('url > loc');
+                for (let i = 0; i < urlElements.length && addedCount < 3; i++) {
+                    const subUrl = urlElements[i].textContent;
+                    
+                    // Skip if it's the same as the base URL or already in our list
+                    if (subUrl === baseUrl || urls.some(u => u.title === subUrl)) {
+                        continue;
+                    }
+                    
+                    console.log(`Adding subpage from sitemap: ${subUrl}`);
+                    
+                    // Add this URL to the list but don't process it yet
+                    const urlObj = { title: subUrl, status: 'ready' };
+                    urls.push(urlObj);
+                    addedCount++;
+                }
                 
-                if (urlElements.length > 0) {
-                    let addedCount = 0;
-                    
-                    for (let i = 0; i < urlElements.length && addedCount < 3; i++) {
-                        const subUrl = urlElements[i].textContent;
-                        
-                        // Skip if it's the same as the base URL or already in our list
-                        if (subUrl === baseUrl || urls.some(u => u.title === subUrl)) {
-                            continue;
-                        }
-                        
-                        console.log(`Adding subpage from sitemap: ${subUrl}`);
-                        
-                        // Add this URL to the list but don't process it yet
-                        const urlObj = { title: subUrl, status: 'ready' };
-                        urls.push(urlObj);
-                        addedCount++;
-                    }
-                    
-                    if (addedCount > 0) {
-                        localStorage.setItem('urls', JSON.stringify(urls));
-                        renderUrls();
-                        alert(`Added ${addedCount} additional pages from the sitemap.`);
-                    }
-                } else {
-                    // Check if this is a sitemap index
-                    const sitemapElements = xmlDoc.querySelectorAll('sitemap > loc');
-                    
-                    if (sitemapElements.length > 0) {
-                        // Get the first sitemap in the index and process it
-                        const firstSitemapUrl = sitemapElements[0].textContent;
-                        console.log(`Found sitemap index, processing first sitemap: ${firstSitemapUrl}`);
-                        
-                        const corsProxy = 'https://corsproxy.io/?';
-                        const sitemapResponse = await fetch(`${corsProxy}${encodeURIComponent(firstSitemapUrl)}`, {
-                            headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                        });
-                        
-                        if (sitemapResponse.ok) {
-                            const subSitemapXml = await sitemapResponse.text();
-                            const subXmlDoc = parser.parseFromString(subSitemapXml, 'text/xml');
-                            const subUrlElements = subXmlDoc.querySelectorAll('url > loc');
-                            
-                            let addedCount = 0;
-                            
-                            for (let i = 0; i < subUrlElements.length && addedCount < 3; i++) {
-                                const subUrl = subUrlElements[i].textContent;
-                                
-                                // Skip if it's the same as the base URL or already in our list
-                                if (subUrl === baseUrl || urls.some(u => u.title === subUrl)) {
-                                    continue;
-                                }
-                                
-                                console.log(`Adding subpage from sitemap index: ${subUrl}`);
-                                
-                                // Add this URL to the list but don't process it yet
-                                const urlObj = { title: subUrl, status: 'ready' };
-                                urls.push(urlObj);
-                                addedCount++;
-                            }
-                            
-                            if (addedCount > 0) {
-                                localStorage.setItem('urls', JSON.stringify(urls));
-                                renderUrls();
-                                alert(`Added ${addedCount} additional pages from the sitemap.`);
-                            }
-                        }
-                    }
+                if (addedCount > 0) {
+                    localStorage.setItem('urls', JSON.stringify(urls));
+                    renderUrls();
+                    alert(`Added ${addedCount} additional pages from the sitemap.`);
                 }
             } else {
-                console.log('No sitemap found for this website');
+                console.log('No URLs found in the sitemap');
             }
         } catch (error) {
             console.error('Error processing sitemap:', error);
