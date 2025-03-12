@@ -179,8 +179,8 @@ The data flow is divided into two distinct phases:
 ```mermaid
 graph TD
     A[User inputs website URL] --> B[Validate URL]
-    B --> C[Fetch website content using browser API]
-    C --> D[Extract readable text content]
+    B --> C[Get URLs from sitemap and given URL, data-source URLs]
+    C --> D[Extract readable text content from data-source URLs]
     D --> E[Process and clean extracted content]
     E --> F[Save extracted content to browser cache]
     F --> G[Display success and activate chat]
@@ -188,8 +188,8 @@ graph TD
 
 1. User inputs a single website URL
 2. Application validates the URL format
-3. Browser fetch API retrieves the website content
-4. HTML is parsed to extract readable text content
+3. Browser calls lambda function to get the parsed sitemap containing URLs. The given URL and the sitemap URLs are data-source URLs
+4. Browser calls lambda function to get the parsed readable text content from the data-source URLs
 5. Content is processed and cleaned
 6. Extracted content is saved in browser cache/localStorage
 7. Success indicator is shown and chat interface is activated
