@@ -309,16 +309,38 @@ document.addEventListener('DOMContentLoaded', () => {
             // Process the fetched sitemap content to extract URLs
             const parser = new DOMParser();
             const xmlDoc = parser.parseFromString(sitemapXml, 'text/xml');
-            const urlElements = xmlDoc.querySelectorAll('url > loc');
+            
+            // Check if it's a sitemap or a sitemap index
+            let urlElements = [];
+            
+            // First check if it's a sitemap index (contains multiple sitemaps)
+            const sitemapLocElements = xmlDoc.getElementsByTagNameNS('*', 'loc');
+            
+            if (sitemapLocElements.length > 0) {
+                console.log(`Found ${sitemapLocElements.length} loc elements in the sitemap`);
+                
+                // Convert to array and extract URLs
+                urlElements = Array.from(sitemapLocElements).map(element => element.textContent);
+                
+                console.log(`Extracted URLs: ${urlElements.slice(0, 3).join(', ')}${urlElements.length > 3 ? '...' : ''}`);
+            } else {
+                console.log('No loc elements found in the sitemap');
+            }
             
             if (urlElements.length > 0) {
                 let addedCount = 0;
                 
                 for (let i = 0; i < urlElements.length && addedCount < 3; i++) {
-                    const subUrl = urlElements[i].textContent;
+                    const subUrl = urlElements[i];
                     
                     // Skip if it's the same as the base URL or already in our list
                     if (subUrl === baseUrl || urls.some(u => u.title === subUrl)) {
+                        continue;
+                    }
+                    
+                    // Skip if it's a sitemap file rather than a content URL
+                    if (subUrl.endsWith('.xml')) {
+                        console.log(`Skipping sitemap reference: ${subUrl}`);
                         continue;
                     }
                     
