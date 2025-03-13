@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let urls = JSON.parse(localStorage.getItem('urls')) || [];
     let chatHistory = JSON.parse(localStorage.getItem('chatHistory')) || [];
-    let currentWebsiteContent = '';
+    let currentWebsiteContent = [];
     let systemPrompt = ''; // Will store the loaded prompt template
     let websiteConfigs = {}; // Will store loaded website configurations
 
@@ -156,7 +156,7 @@ document.addEventListener('DOMContentLoaded', () => {
             chatHistory = [];
             localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
             localStorage.removeItem('websiteContent');
-            currentWebsiteContent = '';
+            currentWebsiteContent = [];
             renderChat();
             chatInput.disabled = true;
             sendMessageBtn.disabled = true;
@@ -210,8 +210,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const hardcodedContent = getHardcodedContent(url);
             if (hardcodedContent) {
                 console.log(`Using pre-cached content for ${url}`);
-                currentWebsiteContent = hardcodedContent;
-                localStorage.setItem('websiteContent', hardcodedContent);
+                currentWebsiteContent = [hardcodedContent];
+                localStorage.setItem('websiteContent', JSON.stringify(currentWebsiteContent));
                 
                 urlObj.status = 'ready';
                 localStorage.setItem('urls', JSON.stringify(urls));
@@ -235,11 +235,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Normal case - try to fetch website content
             console.log(`Attempting to fetch content from ${url}...`);
+            await processSitemap(url);
             const content = await fetchWebsiteContent(url);
             currentWebsiteContent = content;
             
             // Store content in local storage (may be limited by storage size)
-            localStorage.setItem('websiteContent', content);
+            localStorage.setItem('websiteContent', JSON.stringify(content));
             
             urlObj.status = 'ready';
             localStorage.setItem('urls', JSON.stringify(urls));
@@ -251,13 +252,6 @@ document.addEventListener('DOMContentLoaded', () => {
             renderChat();
             
             enableChat();
-
-            // Try to find and process sitemap
-            try {
-                await processSitemap(url);
-            } catch (sitemapError) {
-                console.warn('Could not process sitemap:', sitemapError);
-            }
         } catch (error) {
             urlObj.status = 'error';
             localStorage.setItem('urls', JSON.stringify(urls));
@@ -391,250 +385,30 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const fetchWebsiteContent = async (url) => {
-        // List of CORS proxies to try (in order)
-        const corsProxies = [
-            'https://corsproxy.io/?',
-            'https://api.allorigins.win/raw?url=',
-            'https://cors-anywhere.herokuapp.com/',
-            'https://crossorigin.me/',
-            'https://thingproxy.freeboard.io/fetch/'
-        ];
-        
-        let lastError = null;
-        
-        // Try with the more flexible allorigins.win/get approach first (includes response headers)
-        try {
-            const allOriginsProxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}&charset=UTF-8`;
-            console.log(`Trying enhanced AllOrigins proxy for URL: ${url}`);
-            
-            const response = await fetch(allOriginsProxyUrl);
-            
-            if (response.ok) {
-                const data = await response.json();
-                if (data && data.contents) {
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(data.contents, 'text/html');
-                    const content = extractContent(doc);
-                    return content;
-                }
-            }
-        } catch (error) {
-            console.warn(`Error with enhanced AllOrigins proxy:`, error);
-        }
-        
-        // Try each proxy in sequence with standard mode
-        for (const proxy of corsProxies) {
+        const lambdaEndpoint = 'https://otybap4xr0.execute-api.us-east-1.amazonaws.com/default/get-webpage';
+        const urlsToFetch = [url, ...urls.filter(u => u.status === 'ready').map(u => u.title)];
+        const websiteContent = [];
+
+        for (const targetUrl of urlsToFetch) {
             try {
-                const proxyUrl = `${proxy}${encodeURIComponent(url)}`;
-                console.log(`Trying proxy: ${proxy} for URL: ${url}`);
-                
-                const response = await fetch(proxyUrl, {
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                const lambdaUrl = `${lambdaEndpoint}?url=${encodeURIComponent(targetUrl)}`;
+                const response = await fetch(lambdaUrl);
+                if (response.ok) {
+                    const jsonResponse = await response.json();
+                    if (jsonResponse.content) {
+                        websiteContent.push(jsonResponse.content);
+                    } else {
+                        console.warn(`No content found for URL: ${targetUrl}`);
                     }
-                });
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                } else {
+                    console.warn(`Failed to fetch content for URL: ${targetUrl}`);
                 }
-                
-                const text = await response.text();
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(text, 'text/html');
-                
-                // Extract meaningful content from the page
-                const content = extractContent(doc);
-                return content;
             } catch (error) {
-                console.warn(`Error with proxy ${proxy}:`, error);
-                lastError = error;
-                // Continue to the next proxy
+                console.error(`Error fetching content for URL: ${targetUrl}`, error);
             }
         }
-        
-        // Try with no-cors mode
-        try {
-            console.log("Trying direct fetch with no-cors mode...");
-            const response = await fetch(url, { 
-                mode: 'no-cors',
-                cache: 'no-cache',
-                headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-                }
-            });
-            
-            console.log("Got a response with no-cors mode");
-            
-            // Instead, we'll use iframe-based scraping
-            return await extractContentViaIframe(url);
-        } catch (directError) {
-            console.error("Direct fetch with no-cors failed:", directError);
-        }
 
-        // Try an alternative "soft" scrape approach
-        try {
-            console.log("Trying alternate extraction method...");
-            return await extractWithMetadata(url);
-        } catch (metaError) {
-            console.error("Metadata extraction failed:", metaError);
-        }
-        
-        // Fallback to our final method: Google's cached version
-        try {
-            console.log("Trying Google's cached version...");
-            const googleCache = `https://webcache.googleusercontent.com/search?q=cache:${encodeURIComponent(url)}`;
-            console.log(`Accessing: ${googleCache}`);
-            
-            const response = await fetch(googleCache);
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error from Google cache! status: ${response.status}`);
-            }
-            
-            const text = await response.text();
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(text, 'text/html');
-            
-            const content = extractContent(doc);
-            return content;
-        } catch (cacheError) {
-            console.error("Google cache access failed:", cacheError);
-        }
-
-        // If all methods fail, create some minimal content about the site
-        console.error("All content extraction methods failed");
-        throw new Error(`Unable to access content from ${url}. Please try another website.`);
-    };
-
-    // New function to extract content via an iframe
-    const extractContentViaIframe = (url) => {
-        return new Promise((resolve, reject) => {
-            console.log("Creating iframe for content extraction...");
-            
-            // Create a temporary hidden iframe
-            const iframe = document.createElement('iframe');
-            iframe.style.display = 'none';
-            iframe.src = url;
-            
-            // Set a timeout in case the iframe doesn't load
-            const timeout = setTimeout(() => {
-                document.body.removeChild(iframe);
-                reject(new Error("Iframe loading timed out"));
-            }, 15000); // 15 seconds timeout
-            
-            // When the iframe loads, try to extract content
-            iframe.onload = () => {
-                clearTimeout(timeout);
-                try {
-                    // Try to access the iframe content (may fail due to CORS)
-                    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                    const content = extractContent(iframeDoc);
-                    
-                    // Remove the iframe when done
-                    document.body.removeChild(iframe);
-                    resolve(content);
-                } catch (error) {
-                    document.body.removeChild(iframe);
-                    reject(new Error("Could not access iframe content due to CORS restrictions"));
-                }
-            };
-            
-            // Handle iframe loading errors
-            iframe.onerror = () => {
-                clearTimeout(timeout);
-                document.body.removeChild(iframe);
-                reject(new Error("Failed to load iframe"));
-            };
-            
-            // Add the iframe to the document to start loading
-            document.body.appendChild(iframe);
-        });
-    };
-
-    const extractContent = (doc) => {
-        // Remove script and style elements
-        const scripts = doc.getElementsByTagName('script');
-        const styles = doc.getElementsByTagName('style');
-        
-        for (let i = scripts.length - 1; i >= 0; i--) {
-            scripts[i].parentNode.removeChild(scripts[i]);
-        }
-        
-        for (let i = styles.length - 1; i >= 0; i--) {
-            styles[i].parentNode.removeChild(styles[i]);
-        }
-        
-        // Get text from body, title, meta description, and headings
-        const title = doc.querySelector('title')?.innerText || '';
-        const metaDesc = doc.querySelector('meta[name="description"]')?.getAttribute('content') || '';
-        const headings = Array.from(doc.querySelectorAll('h1, h2, h3, h4, h5, h6')).map(h => h.innerText).join('\n');
-        const paragraphs = Array.from(doc.querySelectorAll('p')).map(p => p.innerText).join('\n');
-        
-        return `
-            Website Title: ${title}
-            
-            Description: ${metaDesc}
-            
-            Main Headings:
-            ${headings}
-            
-            Content:
-            ${paragraphs}
-            
-            Full Text:
-            ${doc.body.innerText}
-        `;
-    };
-
-    // Add a new function to extract basic metadata when full content isn't available
-    const extractWithMetadata = async (url) => {
-        try {
-            // Extract domain from URL
-            const urlObj = new URL(url);
-            const domain = urlObj.hostname;
-            const pathname = urlObj.pathname;
-            
-            // Use search engines to find basic information
-            const description = `This appears to be content from ${domain}${pathname}.`;
-            
-            // Try to guess page title from URL path
-            let title = domain;
-            if (pathname && pathname !== '/') {
-                // Clean up the pathname to create something readable
-                const pathSegments = pathname.split('/').filter(segment => segment.length > 0);
-                if (pathSegments.length > 0) {
-                    // Convert last segment from slug to title (e.g., "my-article-title" -> "My Article Title")
-                    const lastSegment = pathSegments[pathSegments.length - 1];
-                    const cleanTitle = lastSegment
-                        .replace(/[-_]/g, ' ')
-                        .replace(/\.html$|\.php$|\.asp$/i, '')
-                        .split(' ')
-                        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-                        .join(' ');
-                        
-                    title = cleanTitle || title;
-                }
-            }
-            
-            // Create a basic content structure with available information
-            return `
-                Website Title: ${title}
-                
-                URL: ${url}
-                
-                Domain: ${domain}
-                
-                Description: ${description}
-                
-                Note: Full content extraction was not possible. This is limited information derived from the URL.
-                
-                To learn more about this website, please visit it directly at ${url}.
-            `;
-        } catch (error) {
-            console.error("Metadata extraction failed:", error);
-            throw error;
-        }
+        return websiteContent;
     };
 
     const processChat = async (userMessage) => {
@@ -646,7 +420,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             // Get website content
-            const websiteContent = currentWebsiteContent || localStorage.getItem('websiteContent');
+            const websiteContent = currentWebsiteContent.length > 0 ? currentWebsiteContent.join('\n') : localStorage.getItem('websiteContent');
             
             // Replace placeholder in the system prompt with actual content
             const promptWithContent = systemPrompt.replace('[WEBSITE_CONTENT_PLACEHOLDER]', websiteContent);
