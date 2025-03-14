@@ -671,6 +671,26 @@ document.addEventListener('DOMContentLoaded', () => {
     createStoreIdBtn.addEventListener('click', () => {
         const apiKey = localStorage.getItem('openaiApiKey');
         if (apiKey) {
+            // Clear all existing data
+            localStorage.removeItem('chatHistory');
+            localStorage.removeItem('urls');
+            localStorage.removeItem('websiteContent');
+            localStorage.removeItem('fileIds');
+            chatHistory = [];
+            urls = [];
+            currentWebsiteContent = [];
+            fileIds = [];
+            renderChat();
+            renderUrls();
+            chatInput.disabled = true;
+            sendMessageBtn.disabled = true;
+
+            // Display message to inform the user
+            alert('Previous data has been cleared due to store ID recreation. Please input website URL(s) again to rebuild the knowledge base.');
+
+            // Show the URL modal to prompt the user to input website URL(s) again
+            urlModal.style.display = 'flex';
+
             createVectorStore(apiKey);
         } else {
             apiKeyModal.style.display = 'flex';
