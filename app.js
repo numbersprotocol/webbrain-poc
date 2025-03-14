@@ -12,6 +12,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const apiKeyModal = document.getElementById('api-key-modal');
     const apiKeyInput = document.getElementById('api-key-input');
     const apiKeySaveBtn = document.getElementById('api-key-save-btn');
+    const redBar = document.getElementById('red-bar');
+    const createStoreIdBtn = document.getElementById('create-store-id-btn');
 
     let urls = JSON.parse(localStorage.getItem('urls')) || [];
     let chatHistory = JSON.parse(localStorage.getItem('chatHistory')) || [];
@@ -106,20 +108,50 @@ document.addEventListener('DOMContentLoaded', () => {
             // Also ensure the URL modal is hidden
             urlModal.style.display = 'none';
         }
+
+        // Check if vector store ID is missing
+        if (!localStorage.getItem('vector_store_id')) {
+            redBar.style.display = 'block';
+        }
     };
 
     // Save API key
-    apiKeySaveBtn.addEventListener('click', () => {
+    apiKeySaveBtn.addEventListener('click', async () => {
         const apiKey = apiKeyInput.value.trim();
         if (apiKey) {
             localStorage.setItem('openaiApiKey', apiKey);
-            // Add the hard-coded vector_store_id to localStorage
-            localStorage.setItem('vector_store_id', 'vs_67d3fa354c8881919a321565a088495d');
+            await createVectorStore(apiKey);
             apiKeyModal.style.display = 'none';
         } else {
             alert('Please enter a valid OpenAI API key');
         }
     });
+
+    const createVectorStore = async (apiKey) => {
+        try {
+            const response = await fetch('https://api.openai.com/v1/vector_stores', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify({
+                    name: 'knowledge_base'
+                })
+            });
+
+            const data = await response.json();
+            if (data.id) {
+                localStorage.setItem('vector_store_id', data.id);
+                console.log('Vector store created successfully:', data.id);
+            } else {
+                throw new Error('Failed to create vector store');
+            }
+        } catch (error) {
+            console.error('Error creating vector store:', error);
+            alert('Error creating vector store. Please try again.');
+        }
+    };
 
     const renderUrls = () => {
         urlList.innerHTML = '';
@@ -633,6 +665,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (event.key === 'Enter') {
             apiKeySaveBtn.click();
         }
+    });
+
+    createStoreIdBtn.addEventListener('click', () => {
+        apiKeyModal.style.display = 'flex';
     });
 
     // Start the application
