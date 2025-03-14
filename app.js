@@ -106,16 +106,53 @@ document.addEventListener('DOMContentLoaded', () => {
             // Also ensure the URL modal is hidden
             urlModal.style.display = 'none';
         }
+
+        // Check if vector store ID is missing and prompt user to create it
+        if (!localStorage.getItem('vector_store_id')) {
+            const createStore = confirm('Vector store ID is missing. Do you want to create a new vector store?');
+            if (createStore) {
+                try {
+                    await createVectorStore();
+                } catch (error) {
+                    console.error('Error creating vector store:', error);
+                    alert('Error creating vector store. Please try again.');
+                }
+            } else {
+                // Show red bar with "Create store ID now" button
+                const redBar = document.createElement('div');
+                redBar.className = 'red-bar';
+                redBar.innerHTML = `
+                    <p>Store ID is missing. The app can't function properly.</p>
+                    <button id="create-store-id-btn">Create store ID now</button>
+                `;
+                document.body.prepend(redBar);
+
+                // Add event listener to the button
+                document.getElementById('create-store-id-btn').addEventListener('click', async () => {
+                    try {
+                        await createVectorStore();
+                        redBar.remove();
+                    } catch (error) {
+                        console.error('Error creating vector store:', error);
+                        alert('Error creating vector store. Please try again.');
+                    }
+                });
+            }
+        }
     };
 
     // Save API key
-    apiKeySaveBtn.addEventListener('click', () => {
+    apiKeySaveBtn.addEventListener('click', async () => {
         const apiKey = apiKeyInput.value.trim();
         if (apiKey) {
             localStorage.setItem('openaiApiKey', apiKey);
-            // Add the hard-coded vector_store_id to localStorage
-            localStorage.setItem('vector_store_id', 'vs_67d3fa354c8881919a321565a088495d');
-            apiKeyModal.style.display = 'none';
+            try {
+                await createVectorStore();
+                apiKeyModal.style.display = 'none';
+            } catch (error) {
+                console.error('Error creating vector store:', error);
+                alert('Error creating vector store. Please try again.');
+            }
         } else {
             alert('Please enter a valid OpenAI API key');
         }
@@ -591,6 +628,37 @@ document.addEventListener('DOMContentLoaded', () => {
         } finally {
             sendMessageBtn.disabled = false;
             chatInput.focus();
+        }
+    };
+
+    // Function to create a vector store using the OpenAI API key and save the store ID in the browser cache
+    const createVectorStore = async () => {
+        const apiKey = localStorage.getItem('openaiApiKey');
+        if (!apiKey) {
+            throw new Error('OpenAI API key is missing');
+        }
+
+        try {
+            const response = await fetch('https://api.openai.com/v1/vector_stores', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify({ name: 'knowledge_base' })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to create vector store: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            const vectorStoreId = data.id;
+            localStorage.setItem('vector_store_id', vectorStoreId);
+            console.log('Vector store created successfully:', vectorStoreId);
+        } catch (error) {
+            console.error('Error creating vector store:', error);
+            throw error;
         }
     };
 
