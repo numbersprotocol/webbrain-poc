@@ -144,6 +144,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (data.id) {
                 localStorage.setItem('vector_store_id', data.id);
                 console.log('Vector store created successfully:', data.id);
+                redBar.style.display = 'none'; // Hide the red bar after successful creation
             } else {
                 throw new Error('Failed to create vector store');
             }
@@ -668,7 +669,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     createStoreIdBtn.addEventListener('click', () => {
-        apiKeyModal.style.display = 'flex';
+        const apiKey = localStorage.getItem('openaiApiKey');
+        if (apiKey) {
+            createVectorStore(apiKey);
+        } else {
+            apiKeyModal.style.display = 'flex';
+        }
     });
 
     // Start the application
