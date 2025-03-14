@@ -317,6 +317,33 @@
                 margin-bottom: 20px;
             }
         }
+
+        /* Red Bar */
+        .red-bar {
+            display: none;
+            background-color: var(--color-error);
+            color: white;
+            padding: 10px;
+            text-align: center;
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 1001;
+        }
+
+        .red-bar button {
+            background-color: white;
+            color: var(--color-error);
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-weight: 500;
+            margin-left: 10px;
+        }
+
+        .red-bar button:hover {
+            background-color: #f8d7da;
+        }
     </style>
 </head>
 <body>
@@ -404,6 +431,12 @@
             </div>
             <p class="privacy-note">Note: Your API key is stored only in your browser and is not sent anywhere except to OpenAI's official API.</p>
         </div>
+    </div>
+    
+    <!-- Red Bar -->
+    <div id="red-bar" class="red-bar">
+        Store ID is missing. The app can't function properly.
+        <button id="create-store-id-btn">Create store ID now</button>
     </div>
     
     <!-- Script reference -->
