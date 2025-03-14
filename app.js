@@ -18,6 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentWebsiteContent = [];
     let systemPrompt = ''; // Will store the loaded prompt template
     let websiteConfigs = {}; // Will store loaded website configurations
+    let fileIds = JSON.parse(localStorage.getItem('fileIds')) || []; // Store OpenAI file IDs
 
     // Load the system prompt from the YAML file
     const loadSystemPrompt = async () => {
@@ -112,6 +113,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const apiKey = apiKeyInput.value.trim();
         if (apiKey) {
             localStorage.setItem('openaiApiKey', apiKey);
+            // Add the hard-coded vector_store_id to localStorage
+            localStorage.setItem('vector_store_id', 'vs_67d3fa354c8881919a321565a088495d');
             apiKeyModal.style.display = 'none';
         } else {
             alert('Please enter a valid OpenAI API key');
@@ -236,22 +239,31 @@ document.addEventListener('DOMContentLoaded', () => {
             // Normal case - try to fetch website content
             console.log(`Attempting to fetch content from ${url}...`);
             await processSitemap(url);
-            const content = await fetchWebsiteContent(url);
-            currentWebsiteContent = content;
+            const newFileIds = await fetchWebsiteContent(url);
             
-            // Store content in local storage (may be limited by storage size)
-            localStorage.setItem('websiteContent', JSON.stringify(content));
-            
-            urlObj.status = 'ready';
-            localStorage.setItem('urls', JSON.stringify(urls));
-            renderUrls();
-            
-            // Clear previous chat history when adding a new URL
-            chatHistory = [];
-            localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
-            renderChat();
-            
-            enableChat();
+            if (newFileIds && newFileIds.length > 0) {
+                // Store file IDs
+                fileIds = [...fileIds, ...newFileIds];
+                localStorage.setItem('fileIds', JSON.stringify(fileIds));
+                
+                // We don't need to store website content anymore as it's in OpenAI
+                // But for backward compatibility, keep the object structure
+                currentWebsiteContent = ['Content stored as embeddings in OpenAI'];
+                localStorage.setItem('websiteContent', JSON.stringify(currentWebsiteContent));
+                
+                urlObj.status = 'ready';
+                localStorage.setItem('urls', JSON.stringify(urls));
+                renderUrls();
+                
+                // Clear previous chat history when adding a new URL
+                chatHistory = [];
+                localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
+                renderChat();
+                
+                enableChat();
+            } else {
+                throw new Error('Failed to process website content');
+            }
         } catch (error) {
             urlObj.status = 'error';
             localStorage.setItem('urls', JSON.stringify(urls));
@@ -387,18 +399,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const fetchWebsiteContent = async (url) => {
         const lambdaEndpoint = 'https://otybap4xr0.execute-api.us-east-1.amazonaws.com/default/get-webpage';
         const urlsToFetch = [url, ...urls.filter(u => u.status === 'ready').map(u => u.title)];
-        const websiteContent = [];
+        const newFileIds = [];
+        const vectorStoreId = localStorage.getItem('vector_store_id');
 
         for (const targetUrl of urlsToFetch) {
             try {
-                const lambdaUrl = `${lambdaEndpoint}?url=${encodeURIComponent(targetUrl)}`;
+                // Include vector_store_id in the request to associate files with the vector store
+                const lambdaUrl = `${lambdaEndpoint}?url=${encodeURIComponent(targetUrl)}&vector_store_id=${encodeURIComponent(vectorStoreId)}`;
                 const response = await fetch(lambdaUrl);
+                
                 if (response.ok) {
                     const jsonResponse = await response.json();
-                    if (jsonResponse.content) {
-                        websiteContent.push(jsonResponse.content);
+                    
+                    if (jsonResponse.file_id) {
+                        console.log(`File created for URL: ${targetUrl}, File ID: ${jsonResponse.file_id}`);
+                        newFileIds.push({
+                            url: targetUrl,
+                            fileId: jsonResponse.file_id
+                        });
                     } else {
-                        console.warn(`No content found for URL: ${targetUrl}`);
+                        console.warn(`No file ID returned for URL: ${targetUrl}`);
                     }
                 } else {
                     console.warn(`Failed to fetch content for URL: ${targetUrl}`);
@@ -408,7 +428,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        return websiteContent;
+        return newFileIds;
     };
 
     const processChat = async (userMessage) => {
@@ -419,47 +439,65 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            // Get website content
-            const websiteContent = currentWebsiteContent.length > 0 ? currentWebsiteContent.join('\n') : localStorage.getItem('websiteContent');
+            // Check if we have file IDs for vector search
+            const storedFileIds = JSON.parse(localStorage.getItem('fileIds')) || [];
+            const vectorStoreId = localStorage.getItem('vector_store_id');
             
-            // Replace placeholder in the system prompt with actual content
-            const promptWithContent = systemPrompt.replace('[WEBSITE_CONTENT_PLACEHOLDER]', websiteContent);
+            // Get website content for fallback or context enrichment
+            const websiteContent = currentWebsiteContent.length > 0 ? 
+                currentWebsiteContent.join('\n') : 
+                JSON.parse(localStorage.getItem('websiteContent') || '[""]')[0];
             
-            // Prepare messages for OpenAI
-            const openAiMessages = [
-                { 
-                    role: 'system', 
-                    content: promptWithContent
-                },
-                { 
-                    role: 'user', 
-                    content: userMessage
-                }
-            ];
-
-            // Add previous conversation context (limited to last few messages)
+            // Replace placeholder in the system prompt with appropriate content
+            const promptWithContent = systemPrompt.replace(
+                '[WEBSITE_CONTENT_PLACEHOLDER]', 
+                vectorStoreId ? 'Content is available in the vector store.' : websiteContent
+            );
+            
+            // Previous conversation context (limited to last few messages)
             const previousMessages = chatHistory.slice(-4);
+            let conversationContext = '';
+            /*
             if (previousMessages.length > 0) {
-                previousMessages.forEach(msg => {
-                    openAiMessages.splice(1, 0, { 
-                        role: msg.sender === 'user' ? 'user' : 'assistant', 
-                        content: msg.text 
-                    });
-                });
+                conversationContext = previousMessages.map(msg => 
+                    `${msg.sender === 'user' ? 'User' : 'Assistant'}: ${msg.text}`
+                ).join('\n\n');
+                conversationContext += '\n\n';
+            }
+            */
+            // Full input for the API
+            const fullInput = `${promptWithContent}\n\n${conversationContext}User: ${userMessage}`;
+            
+            // Add debugging message to show fullInput in console
+            console.log('Debug - Full input to OpenAI:', fullInput);
+            console.log('Debug - Full input length (chars):', fullInput.length);
+            
+            // Prepare the request payload for /v1/responses endpoint
+            const requestPayload = {
+                model: 'gpt-4o-mini',
+                input: fullInput
+            };
+            
+            // If we have a vector store, add the file_search tool
+            if (vectorStoreId) {
+                requestPayload.tools = [
+                    {
+                        type: "file_search",
+                        vector_store_ids: [vectorStoreId],
+                        max_num_results: 20
+                    }
+                ];
             }
 
-            // OpenAI API call
-            const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            // OpenAI API call to the responses endpoint
+            console.log('Debug - request payload', requestPayload);
+            const response = await fetch('https://api.openai.com/v1/responses', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${apiKey}`
                 },
-                body: JSON.stringify({
-                    model: 'gpt-4o',
-                    messages: openAiMessages,
-                    temperature: 0.7,
-                })
+                body: JSON.stringify(requestPayload)
             });
 
             const data = await response.json();
@@ -468,8 +506,36 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(data.error.message || 'Error from OpenAI API');
             }
 
-            // Extract the AI response
-            return data.choices[0].message.content;
+            // Extract the AI response from the new endpoint format
+            // The output is now an array that can contain different types of responses
+            let aiResponse = "I couldn't generate a response based on the website content. Please try asking a different question.";
+            
+            if (data.output) {
+                // Look for message type outputs
+                const messageOutputs = data.output.filter(item => item.type === 'message');
+                
+                if (messageOutputs.length > 0) {
+                    const messageContent = messageOutputs[0].content;
+                    if (messageContent && messageContent.length > 0) {
+                        // Extract the text from the first content item
+                        const textContent = messageContent.filter(item => item.type === 'output_text');
+                        if (textContent.length > 0) {
+                            aiResponse = textContent[0].text;
+                            
+                            // Check if there are file citations
+                            if (textContent[0].annotations && textContent[0].annotations.length > 0) {
+                                const citations = textContent[0].annotations.filter(ann => ann.type === 'file_citation');
+                                if (citations.length > 0) {
+                                    console.log(`Response includes ${citations.length} file citations`);
+                                    // You could process citations here if needed
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            return aiResponse;
         } catch (error) {
             console.error('OpenAI API error:', error);
             throw new Error(`AI processing error: ${error.message}`);
