@@ -109,8 +109,8 @@ document.addEventListener('DOMContentLoaded', () => {
             urlModal.style.display = 'none';
         }
 
-        // Check if vector store ID is missing
-        if (!localStorage.getItem('vector_store_id')) {
+        // Check if vector store ID is missing and openaiApiKey is present
+        if (localStorage.getItem('openaiApiKey') && !localStorage.getItem('vector_store_id')) {
             redBar.style.display = 'block';
         }
     };
