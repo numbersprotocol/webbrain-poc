@@ -346,7 +346,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             if (!sitemapData) {
-                throw new Error('Failed to fetch any sitemap');
+                console.warn('No sitemap found. Continuing to process the main URL.');
+                await fetchWebsiteContent(baseUrl);
+                return;
             }
             
             // Extract URLs based on the sitemap type
