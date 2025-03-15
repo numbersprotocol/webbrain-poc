@@ -1,6 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
     const urlInput = document.getElementById('url-input');
     const addUrlBtn = document.getElementById('add-url-btn');
+    const uploadUrlListBtn = document.getElementById('upload-url-list-btn');
+    const fileInput = document.getElementById('file-input');
     const urlList = document.getElementById('url-list');
     const chatInput = document.getElementById('chat-input');
     const sendMessageBtn = document.getElementById('send-message-btn');
@@ -707,6 +709,52 @@ document.addEventListener('DOMContentLoaded', () => {
             apiKeyModal.style.display = 'flex';
         }
     });
+
+    // Event listener for the "Upload URL List" button
+    uploadUrlListBtn.addEventListener('click', () => {
+        fileInput.click();
+    });
+
+    // Event listener for file input change
+    fileInput.addEventListener('change', async (event) => {
+        const file = event.target.files[0];
+        if (file) {
+            try {
+                const urls = await parseFile(file);
+                await processUrls(urls);
+            } catch (error) {
+                console.error('Error processing file:', error);
+                alert(`Error processing file: ${error.message}`);
+            }
+        }
+    });
+
+    // Function to parse the selected file and extract URLs
+    const parseFile = (file) => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const content = event.target.result;
+                const urls = content.split('\n').map(line => line.trim()).filter(line => line);
+                resolve(urls);
+            };
+            reader.onerror = (error) => {
+                reject(error);
+            };
+            reader.readAsText(file);
+        });
+    };
+
+    // Function to process the extracted URLs
+    const processUrls = async (urls) => {
+        for (const url of urls) {
+            if (isValidUrl(url)) {
+                await addUrl(url);
+            } else {
+                console.warn(`Invalid URL: ${url}`);
+            }
+        }
+    };
 
     // Start the application
     initApp();

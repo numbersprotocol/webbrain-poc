@@ -81,7 +81,7 @@
 
         .tagline {
             font-size: 16px;
-            color: var(--color-text-light);
+            color: var (--color-text-light);
             margin-top: 5px;
         }
 
@@ -366,7 +366,9 @@
                 <div class="url-input-container">
                     <input type="text" id="url-input" placeholder="Enter website URL...">
                     <button id="add-url-btn">Add</button>
+                    <button id="upload-url-list-btn">Upload URL List</button>
                 </div>
+                <input type="file" id="file-input" accept=".txt" style="display: none;">
                 <ul id="url-list" class="url-list">
                     <!-- Example URL items -->
                     <li>
