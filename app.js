@@ -216,7 +216,7 @@ document.addEventListener('DOMContentLoaded', () => {
         chatHistory.forEach(message => {
             const div = document.createElement('div');
             div.className = `message ${message.sender}`;
-            div.textContent = message.text;
+            div.innerHTML = message.text;
             chatContainer.appendChild(div);
         });
         
@@ -569,7 +569,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            return aiResponse;
+            // Replace full URLs with numbered references
+            const urlRegex = /(https?:\/\/[^\s]+)/g;
+            let referenceIndex = 1;
+            const references = [];
+            const aiResponseWithReferences = aiResponse.replace(urlRegex, (url) => {
+                references.push(url);
+                return `<span class="reference" data-url="${url}">[${referenceIndex++}]</span>`;
+            });
+
+            return aiResponseWithReferences;
         } catch (error) {
             console.error('OpenAI API error:', error);
             throw new Error(`AI processing error: ${error.message}`);
@@ -626,6 +635,35 @@ document.addEventListener('DOMContentLoaded', () => {
             sendMessageBtn.disabled = false;
             chatInput.focus();
         }
+    };
+
+    // Function to generate tooltips with full URLs when hovering over numbered references
+    const generateTooltips = () => {
+        document.querySelectorAll('.reference').forEach(reference => {
+            reference.addEventListener('mouseenter', (event) => {
+                const url = event.target.getAttribute('data-url');
+                const tooltip = document.createElement('div');
+                tooltip.className = 'tooltip';
+                tooltip.innerHTML = `<a href="${url}" target="_blank">${url}</a>`;
+                document.body.appendChild(tooltip);
+                const rect = event.target.getBoundingClientRect();
+                tooltip.style.left = `${rect.left + window.scrollX}px`;
+                tooltip.style.top = `${rect.bottom + window.scrollY}px`;
+                event.target.tooltip = tooltip;
+            });
+
+            reference.addEventListener('mouseleave', (event) => {
+                if (event.target.tooltip) {
+                    document.body.removeChild(event.target.tooltip);
+                    event.target.tooltip = null;
+                }
+            });
+
+            reference.addEventListener('click', (event) => {
+                const url = event.target.getAttribute('data-url');
+                window.open(url, '_blank');
+            });
+        });
     };
 
     // Event listeners
