@@ -760,6 +760,72 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    // Initialize resizable panel
+    const initResizablePanel = () => {
+        const sourcesColumn = document.querySelector('.sources-column');
+        const chatColumn = document.querySelector('.chat-column');
+        const divider = document.querySelector('.divider');
+        const appContent = document.querySelector('.app-content');
+
+        let isResizing = false;
+        let startX = 0;
+        let startWidth = 0;
+
+        const minWidthSources = 200; // Minimum width for sources column
+        const minWidthChat = 300; // Minimum width for chat column
+
+        const totalWidth = appContent.clientWidth;
+
+        const handleMouseMove = (event) => {
+            if (!isResizing) return;
+
+            const dx = event.clientX - startX;
+            let newSourcesWidth = startWidth + dx;
+            let newChatWidth = totalWidth - newSourcesWidth - divider.clientWidth;
+
+            // Ensure minimum widths
+            if (newSourcesWidth < minWidthSources) {
+                newSourcesWidth = minWidthSources;
+                newChatWidth = totalWidth - minWidthSources - divider.clientWidth;
+            } else if (newChatWidth < minWidthChat) {
+                newChatWidth = minWidthChat;
+                newSourcesWidth = totalWidth - minWidthChat - divider.clientWidth;
+            }
+
+            sourcesColumn.style.width = `${newSourcesWidth}px`;
+            chatColumn.style.width = `${newChatWidth}px`;
+
+            // Save the user's preferred panel size ratio in localStorage
+            const ratio = newSourcesWidth / totalWidth;
+            localStorage.setItem('panelSizeRatio', ratio);
+        };
+
+        const handleMouseUp = () => {
+            isResizing = false;
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+        };
+
+        const handleMouseDown = (event) => {
+            isResizing = true;
+            startX = event.clientX;
+            startWidth = sourcesColumn.clientWidth;
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+        };
+
+        divider.addEventListener('mousedown', handleMouseDown);
+
+        // Load the user's preferred panel size ratio from localStorage
+        const savedRatio = localStorage.getItem('panelSizeRatio');
+        if (savedRatio) {
+            const newSourcesWidth = totalWidth * savedRatio;
+            const newChatWidth = totalWidth - newSourcesWidth - divider.clientWidth;
+            sourcesColumn.style.width = `${newSourcesWidth}px`;
+            chatColumn.style.width = `${newChatWidth}px`;
+        }
+    };
+
     // Start the application
     initApp();
 });
