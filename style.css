@@ -396,3 +396,24 @@ h2 {
 .markdown-content strong {
     font-weight: bold;
 }
+
+/* New Button and Container */
+.url-actions-container {
+    display: flex;
+    margin-bottom: 20px;
+}
+
+.secondary-btn {
+    padding: 10px 15px;
+    background-color: var(--color-background);
+    color: var(--color-primary);
+    border: 1px solid var(--color-primary);
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    width: 100%;
+}
+
+.secondary-btn:hover {
+    background-color: var(--color-primary-light);
+}

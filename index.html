@@ -147,6 +147,27 @@
             background-color: var(--color-primary-dark);
         }
 
+        .url-actions-container {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 20px;
+        }
+
+        .url-actions-container .secondary-btn {
+            padding: 10px 15px;
+            background-color: var(--color-primary-light);
+            color: var(--color-primary-dark);
+            border: 1px solid var(--color-primary-dark);
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .url-actions-container .secondary-btn:hover {
+            background-color: var(--color-primary-dark);
+            color: white;
+        }
+
         /* URL List */
         .url-list {
             list-style: none;
@@ -374,6 +395,10 @@
                 <div class="url-input-container">
                     <input type="text" id="url-input" placeholder="Enter website URL...">
                     <button id="add-url-btn">Add</button>
+                </div>
+                <div class="url-actions-container">
+                    <button id="upload-url-list-btn" class="secondary-btn">Upload URL List</button>
+                    <input type="file" id="file-input" accept=".txt" style="display: none;">
                 </div>
                 <ul id="url-list" class="url-list">
                     <!-- Example URL items -->
