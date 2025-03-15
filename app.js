@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const apiKeySaveBtn = document.getElementById('api-key-save-btn');
     const redBar = document.getElementById('red-bar');
     const createStoreIdBtn = document.getElementById('create-store-id-btn');
+    const divider = document.getElementById('divider');
 
     let urls = JSON.parse(localStorage.getItem('urls')) || [];
     let chatHistory = JSON.parse(localStorage.getItem('chatHistory')) || [];
@@ -115,6 +116,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (localStorage.getItem('openaiApiKey') && !localStorage.getItem('vector_store_id')) {
             redBar.style.display = 'block';
         }
+
+        // Initialize resizable panel
+        initResizablePanel();
     };
 
     // Save API key
