@@ -440,7 +440,6 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 // Include vector_store_id and api_key in the request to associate files with the vector store
                 const lambdaUrl = `${lambdaEndpoint}?url=${encodeURIComponent(targetUrl)}&api_key=${encodeURIComponent(apiKey)}&vector_store_id=${encodeURIComponent(vectorStoreId)}`;
-                console.log(`Fetching content for URL: ${lambdaUrl}`);
                 const response = await fetch(lambdaUrl);
                 
                 if (response.ok) {
