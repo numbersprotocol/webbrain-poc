@@ -436,11 +436,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const urlsToFetch = [url, ...urls.filter(u => u.status === 'ready').map(u => u.title)];
         const newFileIds = [];
         const vectorStoreId = localStorage.getItem('vector_store_id');
+        const apiKey = localStorage.getItem('openaiApiKey'); // Retrieve api_key from localStorage
 
         for (const targetUrl of urlsToFetch) {
             try {
-                // Include vector_store_id in the request to associate files with the vector store
-                const lambdaUrl = `${lambdaEndpoint}?url=${encodeURIComponent(targetUrl)}&vector_store_id=${encodeURIComponent(vectorStoreId)}`;
+                // Include vector_store_id and api_key in the request to associate files with the vector store
+                const lambdaUrl = `${lambdaEndpoint}?url=${encodeURIComponent(targetUrl)}&api_key=${encodeURIComponent(apiKey)}&vector_store_id=${encodeURIComponent(vectorStoreId)}`;
                 const response = await fetch(lambdaUrl);
                 
                 if (response.ok) {
