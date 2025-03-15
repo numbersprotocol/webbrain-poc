@@ -128,6 +128,14 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.setItem('openaiApiKey', apiKey);
             await createVectorStore(apiKey);
             apiKeyModal.style.display = 'none';
+            
+            // Ensure panel widths are reset for mobile after API key submission
+            if (window.innerWidth <= 768) {
+                const sourcesColumn = document.querySelector('.sources-column');
+                const chatColumn = document.querySelector('.chat-column');
+                sourcesColumn.style.width = '';
+                chatColumn.style.width = '';
+            }
         } else {
             alert('Please enter a valid OpenAI API key');
         }
@@ -774,6 +782,30 @@ document.addEventListener('DOMContentLoaded', () => {
         const minWidthSources = 200; // Minimum width for sources column
         const minWidthChat = 300; // Minimum width for chat column
 
+        // Function to check if we're on mobile
+        const isMobile = () => window.innerWidth <= 768;
+
+        // Function to reset panel sizing for mobile
+        const resetForMobile = () => {
+            // Force width to be empty - overriding any previous inline styles
+            sourcesColumn.style.removeProperty('width');
+            chatColumn.style.removeProperty('width');
+            // Add a mobile class to help CSS target these elements
+            sourcesColumn.classList.add('mobile-view');
+            chatColumn.classList.add('mobile-view');
+            divider.style.cursor = isMobile() ? 'default' : 'ew-resize';
+        };
+
+        // Reset on mobile devices or small viewports
+        if (isMobile()) {
+            resetForMobile();
+            return; // Don't apply resizable behavior on mobile
+        } else {
+            // Make sure mobile classes are removed on desktop
+            sourcesColumn.classList.remove('mobile-view');
+            chatColumn.classList.remove('mobile-view');
+        }
+
         const totalWidth = appContent.clientWidth;
 
         const handleMouseMove = (event) => {
@@ -807,6 +839,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         const handleMouseDown = (event) => {
+            if (isMobile()) return; // Prevent resizing on mobile
             isResizing = true;
             startX = event.clientX;
             startWidth = sourcesColumn.clientWidth;
@@ -818,14 +851,47 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Load the user's preferred panel size ratio from localStorage
         const savedRatio = localStorage.getItem('panelSizeRatio');
-        if (savedRatio) {
+        if (savedRatio && !isMobile()) {
             const newSourcesWidth = totalWidth * savedRatio;
             const newChatWidth = totalWidth - newSourcesWidth - divider.clientWidth;
             sourcesColumn.style.width = `${newSourcesWidth}px`;
             chatColumn.style.width = `${newChatWidth}px`;
         }
+
+        // Handle resize events to reset panel sizes on viewport changes
+        window.addEventListener('resize', () => {
+            if (isMobile()) {
+                resetForMobile();
+            } else {
+                // Remove mobile classes when switching to desktop
+                sourcesColumn.classList.remove('mobile-view');
+                chatColumn.classList.remove('mobile-view');
+                
+                // Reapply ratio on desktop if window is resized
+                const savedRatio = localStorage.getItem('panelSizeRatio');
+                if (savedRatio) {
+                    const totalWidth = appContent.clientWidth;
+                    const newSourcesWidth = totalWidth * savedRatio;
+                    const newChatWidth = totalWidth - newSourcesWidth - divider.clientWidth;
+                    sourcesColumn.style.width = `${newSourcesWidth}px`;
+                    chatColumn.style.width = `${newChatWidth}px`;
+                }
+            }
+        });
     };
 
     // Start the application
     initApp();
+    
+    // Ensure panels are properly sized on page load
+    window.addEventListener('load', () => {
+        if (window.innerWidth <= 768) {
+            const sourcesColumn = document.querySelector('.sources-column');
+            const chatColumn = document.querySelector('.chat-column');
+            sourcesColumn.style.removeProperty('width');
+            chatColumn.style.removeProperty('width');
+            sourcesColumn.classList.add('mobile-view');
+            chatColumn.classList.add('mobile-view');
+        }
+    });
 });
