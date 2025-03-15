@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const apiKeySaveBtn = document.getElementById('api-key-save-btn');
     const redBar = document.getElementById('red-bar');
     const createStoreIdBtn = document.getElementById('create-store-id-btn');
+    const divider = document.getElementById('divider');
 
     let urls = JSON.parse(localStorage.getItem('urls')) || [];
     let chatHistory = JSON.parse(localStorage.getItem('chatHistory')) || [];
@@ -113,6 +114,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (localStorage.getItem('openaiApiKey') && !localStorage.getItem('vector_store_id')) {
             redBar.style.display = 'block';
         }
+
+        // Initialize resizable panel
+        initResizablePanel();
     };
 
     // Save API key
@@ -707,6 +711,48 @@ document.addEventListener('DOMContentLoaded', () => {
             apiKeyModal.style.display = 'flex';
         }
     });
+
+    // Initialize resizable panel
+    const initResizablePanel = () => {
+        let isResizing = false;
+        let lastDownX = 0;
+
+        divider.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            lastDownX = e.clientX;
+            document.body.style.cursor = 'ew-resize';
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+
+            const offsetRight = document.body.offsetWidth - (e.clientX - document.body.offsetLeft);
+            const leftPanelWidth = e.clientX - document.body.offsetLeft;
+            const rightPanelWidth = document.body.offsetWidth - leftPanelWidth - divider.offsetWidth;
+
+            if (leftPanelWidth < 200 || rightPanelWidth < 200) return;
+
+            document.querySelector('.sources-column').style.width = `${leftPanelWidth}px`;
+            document.querySelector('.chat-column').style.width = `${rightPanelWidth}px`;
+
+            localStorage.setItem('leftPanelWidth', leftPanelWidth);
+            localStorage.setItem('rightPanelWidth', rightPanelWidth);
+        });
+
+        document.addEventListener('mouseup', () => {
+            isResizing = false;
+            document.body.style.cursor = 'default';
+        });
+
+        // Load saved panel sizes
+        const savedLeftPanelWidth = localStorage.getItem('leftPanelWidth');
+        const savedRightPanelWidth = localStorage.getItem('rightPanelWidth');
+
+        if (savedLeftPanelWidth && savedRightPanelWidth) {
+            document.querySelector('.sources-column').style.width = `${savedLeftPanelWidth}px`;
+            document.querySelector('.chat-column').style.width = `${savedRightPanelWidth}px`;
+        }
+    };
 
     // Start the application
     initApp();
