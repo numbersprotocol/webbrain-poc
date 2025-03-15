@@ -262,7 +262,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Try to find and process sitemap after successfully processing the main URL
                 try {
-                    await processSitemap(url);
+                    await processSitemap(url, false); // Pass false to prevent fetching content again
                 } catch (sitemapError) {
                     console.warn('Could not process sitemap:', sitemapError);
                 }
@@ -271,7 +271,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Normal case - try to fetch website content
             console.log(`Attempting to fetch content from ${url}...`);
-            await processSitemap(url);
+            // First try to find additional URLs from sitemap without fetching content
+            await processSitemap(url, false);
+            
+            // Then fetch content for the main URL and any found URLs
             const newFileIds = await fetchWebsiteContent(url);
             
             if (newFileIds && newFileIds.length > 0) {
@@ -308,7 +311,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // Process sitemap to find additional URLs
-    const processSitemap = async (baseUrl) => {
+    const processSitemap = async (baseUrl, fetchContentIfNoSitemap = true) => {
         try {
             // Remove trailing slash if present
             const normalizedUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
@@ -347,7 +350,10 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (!sitemapData) {
                 console.warn('No sitemap found. Continuing to process the main URL.');
-                await fetchWebsiteContent(baseUrl);
+                // Only fetch content if explicitly requested
+                if (fetchContentIfNoSitemap) {
+                    await fetchWebsiteContent(baseUrl);
+                }
                 return;
             }
             
@@ -433,7 +439,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const fetchWebsiteContent = async (url) => {
         const lambdaEndpoint = 'https://otybap4xr0.execute-api.us-east-1.amazonaws.com/default/get-webpage';
-        const urlsToFetch = [url, ...urls.filter(u => u.status === 'ready').map(u => u.title)];
+        // Only process the main URL we're adding now, not all URLs that are already in the list
+        // This prevents duplicate processing of the same URLs
+        const urlsToFetch = [url];
         const newFileIds = [];
         const vectorStoreId = localStorage.getItem('vector_store_id');
         const apiKey = localStorage.getItem('openaiApiKey'); // Retrieve api_key from localStorage
