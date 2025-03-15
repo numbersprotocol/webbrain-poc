@@ -216,7 +216,7 @@ document.addEventListener('DOMContentLoaded', () => {
         chatHistory.forEach(message => {
             const div = document.createElement('div');
             div.className = `message ${message.sender}`;
-            div.textContent = message.text;
+            div.innerHTML = marked.parse(message.text); // Use marked to parse Markdown
             chatContainer.appendChild(div);
         });
         
@@ -569,7 +569,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            return aiResponse;
+            return marked.parse(aiResponse); // Use marked to parse Markdown
         } catch (error) {
             console.error('OpenAI API error:', error);
             throw new Error(`AI processing error: ${error.message}`);
