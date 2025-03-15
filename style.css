@@ -94,6 +94,7 @@ body {
     display: flex;
     flex-direction: column;
     min-width: 200px; /* Ensure minimum width for sources column */
+    max-width: 100%; /* Ensure columns do not exceed viewport width on smaller screens */
 }
 
 /* Divider */
@@ -116,6 +117,7 @@ h2 {
 .url-input-container {
     display: flex;
     margin-bottom: 20px;
+    width: 100%; /* Ensure input container fits within viewport width on smaller screens */
 }
 
 .url-input-container input {
@@ -223,6 +225,7 @@ h2 {
     background-color: var(--color-chat-background);
     border-radius: 4px;
     min-width: 300px; /* Ensure minimum width for chat column */
+    max-width: 100%; /* Ensure columns do not exceed viewport width on smaller screens */
 }
 
 .welcome-message {
@@ -275,6 +278,7 @@ h2 {
 .chat-input-container {
     display: flex;
     margin-top: auto;
+    width: 100%; /* Ensure input container fits within viewport width on smaller screens */
 }
 
 .chat-input-container input {
